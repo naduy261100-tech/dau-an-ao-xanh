@@ -1,3 +1,8 @@
 name = "dau-an-ao-xanh"
+main = "src/index.js"
 compatibility_date = "2026-11-03"
-pages_build_output_dir = "."
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = true

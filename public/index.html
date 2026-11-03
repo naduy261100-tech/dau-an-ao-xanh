@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#153f34">
+  <meta name="description" content="Dấu ấn Áo xanh — Check-in AI của Chi đoàn Trường Tiểu học Minh Khương.">
+  <title>Dấu ấn Áo xanh | Check-in AI Minh Khương</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <div class="top-strip"></div>
+  <main class="shell">
+    <header class="hero">
+      <div class="eyebrow"><span></span>CÔNG TRÌNH THANH NIÊN · CHI ĐOÀN NHÀ TRƯỜNG</div>
+      <div class="symbol" aria-hidden="true">✦</div>
+      <h1>DẤU ẤN <em>ÁO XANH</em></h1>
+      <p class="school">CHECK-IN AI · TRƯỜNG TIỂU HỌC MINH KHƯƠNG</p>
+      <p class="tagline">Một khoảnh khắc của bạn — một miền xanh được AI sáng tạo.</p>
+    </header>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <p class="kicker">TRẢI NGHIỆM CHECK-IN</p>
+          <h2>Chụp ảnh — AI tự ghép nền</h2>
+        </div>
+        <span class="ai-label">✦ AI STUDIO</span>
+      </div>
+
+      <div class="service-note" id="serviceNote" role="status" aria-live="polite">
+        <span class="status-dot"></span><span id="serviceText">Đang kiểm tra dịch vụ AI…</span>
+      </div>
+
+      <section class="consent">
+        <div class="shield" aria-hidden="true">🛡️</div>
+        <div class="consent-body">
+          <strong>Thông tin xử lý ảnh</strong>
+          <p id="consentDescription">Ảnh sẽ được gửi qua kết nối bảo mật đến PhotoRoom để tạo phong cảnh AI và trả kết quả trực tiếp về điện thoại. Website không lưu ảnh vào thư viện hoặc cơ sở dữ liệu.</p>
+          <p><a class="privacy-link" href="/privacy.html" target="_blank" rel="noopener">Đọc đầy đủ thông tin xử lý ảnh và quyền riêng tư ↗</a></p>
+          <p class="small-note" id="consentWarning">Trong giai đoạn thử nghiệm, chỉ sử dụng ảnh của chính người trưởng thành đã đồng ý. Không sử dụng ảnh học sinh.</p>
+          <label class="check-row">
+            <input type="checkbox" id="consentCheck">
+            <span id="consentLabel">Tôi từ đủ 18 tuổi, đây là ảnh của chính tôi và tôi đồng ý gửi ảnh để xử lý check-in.</span>
+          </label>
+        </div>
+      </section>
+
+      <div class="camera-stage" id="cameraStage">
+        <div class="camera-placeholder" id="cameraPlaceholder">
+          <div class="camera-icon">📷</div>
+          <strong>Sẵn sàng lưu giữ khoảnh khắc?</strong>
+          <span>Đứng nơi đủ sáng, nhìn vào camera và bấm mở camera. AI sẽ tự chọn phong cảnh phù hợp.</span>
+        </div>
+        <video id="cameraVideo" playsinline autoplay muted hidden></video>
+        <img id="resultImage" alt="Ảnh check-in đã được AI xử lý" hidden>
+        <div class="camera-badge" id="cameraBadge" hidden>CAMERA TRỰC TIẾP</div>
+        <div class="camera-badge result-badge" id="resultBadge" hidden>ẢNH ĐÃ HOÀN THÀNH</div>
+      </div>
+
+      <div class="controls" id="startControls">
+        <button class="btn primary" id="startBtn" disabled>✦ MỞ CAMERA & BẮT ĐẦU</button>
+      </div>
+      <div class="controls camera-controls" id="cameraControls" hidden>
+        <button class="btn secondary switch-btn" id="switchBtn" type="button" aria-label="Đổi camera">↻</button>
+        <button class="btn primary" id="captureBtn" type="button">CHỤP ẢNH & GHÉP NỀN</button>
+      </div>
+
+      <div id="turnstileContainer" class="turnstile-container" aria-hidden="true"></div>
+
+      <div class="processing" id="processingPanel" hidden>
+        <div class="spinner"></div>
+        <strong id="processingTitle">AI đang tạo phong cảnh cho bạn…</strong>
+        <span>Đang tách chủ thể, dựng nền và hòa phối ánh sáng. Vui lòng giữ kết nối Internet.</span>
+      </div>
+
+      <div class="controls result-controls" id="resultControls" hidden>
+        <button class="btn secondary" id="retakeBtn" type="button">CHỤP LẠI</button>
+        <button class="btn primary" id="downloadBtn" type="button">↓ TẢI ẢNH VỀ</button>
+      </div>
+      <div class="error-box" id="errorBox" role="alert" aria-live="polite" hidden></div>
+
+      <div class="tip">
+        <span>✧</span><p><strong>Mẹo để ảnh tự nhiên hơn:</strong> nên chụp thấy rõ toàn thân, đủ sáng, không để người khác hoặc đồ vật che khuất. AI không thể bảo đảm giữ nguyên tuyệt đối từng chi tiết trong mọi bức ảnh.</p>
+      </div>
+    </section>
+
+    <section class="steps">
+      <div><b>01</b><span><strong>Chụp một lần</strong><small>Không cần tài khoản</small></span></div>
+      <div><b>02</b><span><strong>AI tự tạo nền</strong><small>Không phải chọn phong cảnh</small></span></div>
+      <div><b>03</b><span><strong>Tải ảnh về</strong><small>Không lưu trên website</small></span></div>
+    </section>
+
+    <footer>
+      <strong>CHI ĐOÀN TRƯỜNG TIỂU HỌC MINH KHƯƠNG</strong>
+      <span>Công trình thanh niên ứng dụng chuyển đổi số và trí tuệ nhân tạo.</span>
+      <small>Ảnh được chuyển tới nhà cung cấp AI để xử lý; không được lưu thành thư viện tại website. Vui lòng đọc thông báo xử lý ảnh trước khi sử dụng.</small>
+      <small class="credits">Ảnh tham chiếu phong cảnh: Quang Nguyen Vinh và Q. Hưng Phạm / Pexels.</small>
+    </footer>
+  </main>
+  <script src="/assets/app.js" defer></script>
+</body>
+</html>
