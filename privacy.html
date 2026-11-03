@@ -40,7 +40,7 @@
 <li>Log vận hành được giữ 15 ngày; API access logs được giữ một năm.</li>
 <li>PhotoRoom công bố ảnh gửi qua API không được dùng để huấn luyện mô hình AI.</li>
 </ul>
-<p>Cloudflare cung cấp dịch vụ lưu trữ website và xử lý yêu cầu API. Nhà trường cần rà soát điều khoản, vị trí xử lý và danh sách nhà thầu phụ hiện hành của cả hai nhà cung cấp.</p>
+<p>Cloudflare cung cấp dịch vụ lưu trữ website, xử lý yêu cầu API và xác thực chống lạm dụng bằng Turnstile. Để xác thực, Cloudflare có thể xử lý địa chỉ IP, hostname, thông tin trình duyệt/thiết bị và tín hiệu bảo mật của phiên truy cập. Nhà trường cần rà soát điều khoản, vị trí xử lý và danh sách nhà thầu phụ hiện hành của cả hai nhà cung cấp.</p>
 <p>Nguồn: <a href="https://www.photoroom.com/platform/security" target="_blank" rel="noopener">PhotoRoom — Data Security & Privacy</a>.</p>
 
 <h2>3. Lựa chọn và quyền của người trong ảnh</h2>
@@ -50,6 +50,7 @@
 <li>Không dùng ảnh của người khác khi chưa có quyền hoặc sự đồng ý hợp lệ.</li>
 <li>Không dùng ảnh học sinh trước khi nhà trường hoàn tất việc xác định căn cứ xử lý, thông báo cho cha mẹ/người đại diện theo pháp luật và lấy chấp thuận cần thiết; đồng thời phải lắng nghe, tôn trọng ý kiến của học sinh theo độ tuổi và quy định áp dụng.</li>
 <li>Website không lưu bằng chứng đồng ý hoặc hồ sơ học sinh; vì vậy, nhà trường cần có quy trình lấy và lưu chấp thuận riêng trước khi bật chế độ sử dụng ảnh học sinh.</li>
+<li>Website không lưu ảnh thành thư viện, nhưng Cloudflare Turnstile xử lý một số tín hiệu kỹ thuật để ngăn lạm dụng; nhà trường cần đọc thông tin quyền riêng tư của Cloudflare khi phê duyệt nhà cung cấp.</li>
 </ul>
 
 <h2>4. Giai đoạn thử nghiệm và vận hành</h2>
