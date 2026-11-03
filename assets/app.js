@@ -12,7 +12,7 @@
     cameraBadge: $("cameraBadge"), resultBadge: $("resultBadge"),
     resultImage: $("resultImage"), captureBtn: $("captureBtn"),
     switchBtn: $("switchBtn"), downloadBtn: $("downloadBtn"), retakeBtn: $("retakeBtn"),
-    processingPanel: $("processingPanel"), errorBox: $("errorBox"),
+    processingPanel: $("processingPanel"), turnstileContainer: $("turnstileContainer"), errorBox: $("errorBox"),
     processingTitle: $("processingTitle")
   };
 
@@ -115,8 +115,9 @@
         audio: false,
         video: {
           facingMode: { ideal: facingMode },
-          width: { ideal: 1600 },
-          height: { ideal: 2000 }
+          width: { ideal: 1200 },
+          height: { ideal: 1600 },
+          aspectRatio: { ideal: 0.75 }
         }
       });
       el.cameraVideo.srcObject = stream;
