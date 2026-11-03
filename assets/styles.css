@@ -114,3 +114,12 @@ footer small { max-width: 570px; margin: 0 auto; color: #9aa59c; font-size: 9px;
   .steps strong { font-size: 9px; }
   .steps small { font-size: 8px; }
 }
+
+.turnstile-container {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
