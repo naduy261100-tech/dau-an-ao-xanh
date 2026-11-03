@@ -25,7 +25,7 @@ PhotoRoom là nhà cung cấp AI xử lý ảnh. Theo trang bảo mật công b�
 
 Nguồn công bố: https://www.photoroom.com/platform/security
 
-Cloudflare cung cấp hosting và xử lý API. Nhà trường cần rà soát điều khoản, vị trí xử lý và chính sách lưu log hiện hành của Cloudflare trước khi phê duyệt.
+Cloudflare cung cấp hosting, xử lý API và xác thực chống lạm dụng qua Turnstile. Turnstile có thể xử lý địa chỉ IP, hostname, thông tin trình duyệt/thiết bị và tín hiệu bảo mật của phiên truy cập. Nhà trường cần rà soát điều khoản, vị trí xử lý, nhà thầu phụ và chính sách lưu log hiện hành của Cloudflare trước khi phê duyệt.
 
 ## 3. Quyền lựa chọn và quyền của người trong ảnh
 
