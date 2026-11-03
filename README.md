@@ -60,6 +60,7 @@ Tạo widget tại **Cloudflare Dashboard → Turnstile → Add widget**. Sau kh
 Để thử nghiệm ban đầu, chỉ bật `ADULT_TESTING_ENABLED=YES`, dùng ảnh của chính người trưởng thành; không dùng ảnh học sinh. Khi vận hành tại trường, tắt cờ adult testing và chỉ bật `SCHOOL_PROCESSING_APPROVED=YES` sau khi nhà trường hoàn tất rà soát. Khóa PhotoRoom và Turnstile phải là **Secret**, tuyệt đối không đưa vào HTML/JavaScript hoặc GitHub.
 
 Sau khi thêm/sửa biến, tạo deployment mới để Pages Functions nhận cấu hình.
+
 ### 3. Kiểm tra
 
 - Mở `https://<ten-du-an>.pages.dev/api/health`; trường `ready` phải là `true`.
@@ -81,7 +82,7 @@ Nguồn: https://www.photoroom.com/api/pricing
 - Luồng xử lý đồng bộ: trình duyệt → Cloudflare Pages Function → PhotoRoom API → trình duyệt.
 - Website không lưu ảnh gốc hoặc ảnh kết quả vào database, KV, R2 hay ổ đĩa.
 - PhotoRoom công bố hạ tầng API tại Hoa Kỳ; ảnh API đồng bộ bị loại bỏ sau khi phản hồi. Log vận hành được giữ 15 ngày và API access logs 1 năm.
-- Thông tin bảo mật hiện hành của PhotoRoom nêu chính sách huấn luyện phụ thuộc gói/hợp đồng; self-serve API có lựa chọn opt-out trong cài đặt. Mã nguồn khóa xử lý cho đến khi quản trị viên xác nhận opt-out đã có hiệu lực.
+- Trang bảo mật PhotoRoom hiện công bố ảnh gửi qua API không được dùng để huấn luyện mô hình AI ở gói self-serve API và Enterprise; nhà trường vẫn phải lưu bản điều khoản/DPA đang áp dụng cho tài khoản thực tế. Mã nguồn khóa xử lý cho đến khi quản trị viên xác nhận đã kiểm tra các điều khoản này.
 - Trước khi dùng ảnh học sinh, nhà trường cần rà soát Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15 (hiệu lực 01/01/2026), Nghị định 356/2025/NĐ-CP, thông báo/chấp thuận, hồ sơ chuyển dữ liệu ra nước ngoài và trách nhiệm của các bên.
 - Giai đoạn đầu chỉ thử nghiệm bằng ảnh của chính người trưởng thành tự nguyện. Không dùng ảnh học sinh trước khi nhà trường phê duyệt quy trình và có chấp thuận phù hợp.
 - Website không có thư viện ảnh, không tự đăng mạng xã hội, không yêu cầu tên/số điện thoại.
