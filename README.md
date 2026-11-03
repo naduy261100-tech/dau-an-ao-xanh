@@ -97,4 +97,4 @@ AI Backgrounds Studio tạo phong cảnh mới dựa trên ảnh chủ thể, pr
 - `functions/api/health.js`: kiểm tra trạng thái.
 - `functions/api/process.js`: kiểm tra đồng ý, xác thực ảnh, gọi AI và trả ảnh không lưu.
 - `_headers`, `_routes.json`, `wrangler.toml`: cấu hình Cloudflare Pages.
-- `PRIVACY.md`: thông báo quyền riêng tư mẫu để nhà trường rà soát/phê duyệt.
+- `PRIVACY.md` và `privacy.html`: thông báo quyền riêng tư mẫu để nhà trường rà soát/phê duyệt.
