@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#153f34">
+<title>Thông tin xử lý ảnh | Dấu ấn Áo xanh</title>
+<link rel="stylesheet" href="/assets/styles.css">
+<style>
+.policy{max-width:760px;margin:24px auto;padding:24px;background:#fff;border:1px solid #e2eae2;border-radius:20px;box-shadow:0 20px 60px rgba(18,55,42,.08)}
+.policy h1{color:#153f34;font:700 30px Georgia,serif}
+.policy h2{margin-top:25px;color:#24553f;font-size:17px}
+.policy p,.policy li{color:#52665a;font-size:14px;line-height:1.7}
+.policy a{color:#216c4b}
+.policy .warning{padding:12px;border-radius:12px;background:#fff7e9;color:#765d2c}
+.back{display:inline-block;margin-top:15px;padding:11px 15px;border-radius:10px;background:#184c3a;color:white;text-decoration:none;font-weight:700}
+</style>
+</head>
+<body>
+<div class="top-strip"></div>
+<main class="policy">
+<p class="kicker">CHI ĐOÀN TRƯỜNG TIỂU HỌC MINH KHƯƠNG</p>
+<h1>Thông tin xử lý ảnh — Dấu ấn Áo xanh</h1>
+<p>Website tạo ảnh check-in tự nguyện bằng cách dùng trí tuệ nhân tạo để tách chủ thể và tạo phông nền thiên nhiên. Đây là thông tin minh bạch về cách ảnh được xử lý trước khi người dùng đồng ý và chụp ảnh.</p>
+
+<h2>1. Ảnh được xử lý như thế nào?</h2>
+<ol>
+<li>Camera trên thiết bị tạo ảnh sau khi người dùng cấp quyền.</li>
+<li>Trình duyệt gửi ảnh qua kết nối HTTPS đến hàm xử lý của website trên Cloudflare.</li>
+<li>Hàm xử lý chuyển ảnh tới PhotoRoom Image Editing API để tách nền, tạo nền AI và hòa phối hình ảnh.</li>
+<li>Ảnh kết quả được truyền trực tiếp về trình duyệt để người dùng xem và tải xuống.</li>
+</ol>
+<p>Website không tạo tài khoản, không hỏi họ tên/số điện thoại, không lưu ảnh thành thư viện, không ghi ảnh vào cơ sở dữ liệu, KV, R2 hoặc ổ đĩa và không tự đăng ảnh lên mạng xã hội. Ảnh kết quả chỉ nằm tạm trong bộ nhớ trình duyệt khi trang còn mở; khi rời trang, đường dẫn ảnh tạm được giải phóng.</p>
+
+<h2>2. Nhà cung cấp AI và dữ liệu chuyển ra nước ngoài</h2>
+<p>PhotoRoom là nhà cung cấp dịch vụ xử lý ảnh. Theo thông tin bảo mật do PhotoRoom công bố tại thời điểm xây dựng website:</p>
+<ul>
+<li>Ảnh gửi qua API đồng bộ được xử lý trong thời gian thực và loại bỏ sau khi phản hồi.</li>
+<li>Hạ tầng của PhotoRoom được công bố tại Hoa Kỳ trên Google Cloud Platform và Amazon Web Services.</li>
+<li>Log vận hành được giữ 15 ngày; API access logs được giữ một năm.</li>
+<li>PhotoRoom công bố ảnh gửi qua API không được dùng để huấn luyện mô hình AI.</li>
+</ul>
+<p>Cloudflare cung cấp dịch vụ lưu trữ website và xử lý yêu cầu API. Nhà trường cần rà soát điều khoản, vị trí xử lý và danh sách nhà thầu phụ hiện hành của cả hai nhà cung cấp.</p>
+<p>Nguồn: <a href="https://www.photoroom.com/platform/security" target="_blank" rel="noopener">PhotoRoom — Data Security & Privacy</a>.</p>
+
+<h2>3. Lựa chọn và quyền của người trong ảnh</h2>
+<ul>
+<li>Chỉ chụp và gửi ảnh khi người trong ảnh đã được thông báo và có căn cứ đồng ý hợp lệ.</li>
+<li>Người dùng có thể từ chối cấp quyền camera, không tiếp tục hoặc đóng trang.</li>
+<li>Không dùng ảnh của người khác khi chưa có quyền hoặc sự đồng ý hợp lệ.</li>
+<li>Không dùng ảnh học sinh trước khi nhà trường hoàn tất việc xác định căn cứ xử lý, thông báo cho cha mẹ/người đại diện theo pháp luật và lấy chấp thuận cần thiết; đồng thời phải lắng nghe, tôn trọng ý kiến của học sinh theo độ tuổi và quy định áp dụng.</li>
+<li>Website không lưu bằng chứng đồng ý hoặc hồ sơ học sinh; vì vậy, nhà trường cần có quy trình lấy và lưu chấp thuận riêng trước khi bật chế độ sử dụng ảnh học sinh.</li>
+</ul>
+
+<h2>4. Giai đoạn thử nghiệm và vận hành</h2>
+<p><strong>Giai đoạn thử nghiệm:</strong> Chỉ dùng ảnh của chính người trưởng thành đã đọc thông báo và đồng ý. Không thử với ảnh học sinh.</p>
+<p><strong>Vận hành tại trường:</strong> Chỉ bật chế độ dành cho nhà trường sau khi nhà trường phê duyệt mục đích, căn cứ xử lý, nội dung thông báo, chấp thuận, chuyển dữ liệu ra nước ngoài, nhà cung cấp xử lý, thời hạn lưu giữ/log và đầu mối tiếp nhận yêu cầu của chủ thể dữ liệu.</p>
+
+<h2>5. Văn bản cần rà soát</h2>
+<ul>
+<li><a href="https://vanban.chinhphu.vn/?classid=1&docid=214590&pageid=27160&typegroup=" target="_blank" rel="noopener">Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15</a>, hiệu lực từ 01/01/2026.</li>
+<li><a href="https://chinhphu.vn/?classid=1&docid=216387&orggroupid=2&pageid=27160" target="_blank" rel="noopener">Nghị định 356/2025/NĐ-CP</a>, hiệu lực từ 01/01/2026.</li>
+</ul>
+<p class="warning">Tài liệu này là thông báo mẫu kỹ thuật, không phải kết luận tuân thủ pháp luật hay tư vấn pháp lý. Nhà trường cần rà soát và phê duyệt nội dung trước khi công khai mã QR.</p>
+<a class="back" href="/">← Quay lại trang check-in</a>
+</main>
+</body>
+</html>
