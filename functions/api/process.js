@@ -85,7 +85,7 @@ export async function onRequestPost({ request, env }) {
   }
 
   const mode = activeMode(env);
-  if (!env.PHOTOROOM_API_KEY || env.PHOTOROOM_NO_TRAINING_CONFIRMED !== "YES" || mode === "locked") {
+  if (!env.PHOTOROOM_API_KEY || env.PHOTOROOM_NO_TRAINING_CONFIRMED !== "YES" || mode === "locked" || !env.TURNSTILE_SECRET_KEY || !env.TURNSTILE_SITE_KEY) {
     return json({ message: "Dịch vụ AI đang khóa. Quản trị viên cần hoàn tất cấu hình API và phê duyệt quyền riêng tư trước khi sử dụng." }, 503);
   }
 
@@ -129,6 +129,34 @@ export async function onRequestPost({ request, env }) {
     return json({ message: "Tệp gửi lên không phải ảnh hợp lệ." }, 415);
   }
 
+  const turnstileToken = form.get("cf-turnstile-response");
+  if (typeof turnstileToken !== "string" || !turnstileToken) {
+    return json({ message: "Không xác thực được lượt chụp. Vui lòng thử lại." }, 403);
+  }
+
+  const verifyBody = new FormData();
+  verifyBody.set("secret", env.TURNSTILE_SECRET_KEY);
+  verifyBody.set("response", turnstileToken);
+  const remoteIp = request.headers.get("CF-Connecting-IP");
+  if (remoteIp) verifyBody.set("remoteip", remoteIp);
+
+  let verification;
+  try {
+    const verifyResponse = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      body: verifyBody,
+      signal: AbortSignal.timeout(10000)
+    });
+    verification = await verifyResponse.json();
+  } catch (_) {
+    return json({ message: "Không xác thực được lượt chụp. Vui lòng thử lại." }, 502);
+  }
+
+  const expectedHost = new URL(request.url).hostname;
+  if (!verification?.success || verification.hostname !== expectedHost) {
+    return json({ message: "Xác thực bảo mật không thành công. Vui lòng tải lại trang và thử lại." }, 403);
+  }
+
   const profile = form.get("photoProfile");
   const scene = profile === "bright" ? SCENES.bright : SCENES.soft;
 
@@ -139,8 +167,6 @@ export async function onRequestPost({ request, env }) {
   apiForm.set("background.prompt", scene.prompt);
   apiForm.set("background.guidance.imageUrl", scene.imageUrl);
   apiForm.set("background.guidance.scale", "0.72");
-  apiForm.set("background.expandPrompt.mode", "ai.auto");
-  apiForm.set("background.seed", String(10000000 + Math.floor(Math.random() * 90000000)));
   apiForm.set("lighting.mode", "ai.preserve-hue-and-saturation");
   apiForm.set("padding", "0.04");
   apiForm.set("maxWidth", "1800");
