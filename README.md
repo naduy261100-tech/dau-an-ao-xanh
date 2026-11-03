@@ -47,20 +47,25 @@ Trong Cloudflare Pages → dự án → **Settings → Variables and Secrets →
 | Tên biến | Loại | Giá trị |
 |---|---|---|
 | `PHOTOROOM_API_KEY` | Secret | API key PhotoRoom; dùng key bắt đầu bằng `sandbox_` để thử nghiệm |
-| `PHOTOROOM_NO_TRAINING_CONFIRMED` | Text | Chỉ đặt `YES` sau khi đã xác nhận lựa chọn opt-out huấn luyện/cải thiện mô hình trong tài khoản PhotoRoom |
-| `ADULT_TESTING_ENABLED` | Text | Đặt `YES` để thử nghiệm giới hạn bằng ảnh của chính người trưởng thành đã đồng ý |
-| `SCHOOL_PROCESSING_APPROVED` | Text | Chỉ đặt `YES` sau khi nhà trường phê duyệt quy trình, thông báo, căn cứ xử lý và phương án chuyển dữ liệu |
+| `PHOTOROOM_NO_TRAINING_CONFIRMED` | Text | Chỉ đặt `YES` sau khi quản trị viên đã đọc và xác nhận điều khoản xử lý dữ liệu/không dùng ảnh API để huấn luyện áp dụng cho đúng gói tài khoản |
+| `ADULT_TESTING_ENABLED` | Text | Đặt `YES` để thử nghiệm chỉ với ảnh của chính người trưởng thành đã đồng ý |
+| `SCHOOL_PROCESSING_APPROVED` | Text | Chỉ đặt `YES` sau khi nhà trường phê duyệt toàn bộ quy trình xử lý và chuyển dữ liệu |
+| `TURNSTILE_SITE_KEY` | Text | Site key từ Cloudflare Turnstile |
+| `TURNSTILE_SECRET_KEY` | Secret | Secret key từ Cloudflare Turnstile |
 
-Để thử nghiệm ban đầu, chỉ đặt `ADULT_TESTING_ENABLED=YES`, dùng ảnh của chính người trưởng thành; chưa dùng ảnh học sinh. Khi đưa vào vận hành tại trường, tắt adult testing và chỉ bật `SCHOOL_PROCESSING_APPROVED=YES` sau khi hoàn tất rà soát. Khóa API phải là **Secret**, tuyệt đối không đưa vào HTML/JavaScript hoặc GitHub.
+Tạo widget tại **Cloudflare Dashboard → Turnstile → Add widget**. Sau khi biết hostname Pages (ví dụ `dau-an-ao-xanh.pages.dev`), thêm hostname này vào widget rồi nhập site key và secret vào Pages. Turnstile dùng chế độ invisible/managed, thường không bắt người chụp thao tác thêm.
+
+`PHOTOROOM_NO_TRAINING_CONFIRMED=YES` là cờ xác nhận nội bộ của quản trị viên, không phải một cài đặt API được tự động kiểm chứng. Trang bảo mật PhotoRoom hiện công bố API images không được dùng để huấn luyện mô hình; nhà trường vẫn phải kiểm tra điều khoản và DPA của đúng tài khoản/gói đang sử dụng.
+
+Để thử nghiệm ban đầu, chỉ bật `ADULT_TESTING_ENABLED=YES`, dùng ảnh của chính người trưởng thành; không dùng ảnh học sinh. Khi vận hành tại trường, tắt cờ adult testing và chỉ bật `SCHOOL_PROCESSING_APPROVED=YES` sau khi nhà trường hoàn tất rà soát. Khóa PhotoRoom và Turnstile phải là **Secret**, tuyệt đối không đưa vào HTML/JavaScript hoặc GitHub.
 
 Sau khi thêm/sửa biến, tạo deployment mới để Pages Functions nhận cấu hình.
-
 ### 3. Kiểm tra
 
 - Mở `https://<ten-du-an>.pages.dev/api/health`; trường `ready` phải là `true`.
 - Mở trang chủ bằng Safari/Chrome trên điện thoại, đồng ý thông báo, cho phép camera và chụp thử bằng ảnh người trưởng thành.
 - Sandbox có watermark. Cần gói/khóa production Plus phù hợp trước khi sử dụng thật.
-- Trước khi in QR, bật Cloudflare WAF rate limiting cho `/api/process`; mức khởi điểm tham khảo 4 yêu cầu/5 phút/IP và điều chỉnh theo lưu lượng.
+- Endpoint có xác thực Turnstile và bộ giới hạn phụ theo IP trong function. Trước khi công khai QR, cần bổ sung Cloudflare WAF/rate-limit rule ở cấp zone nếu tài khoản/domain hỗ trợ; không nên chỉ dựa vào bộ giới hạn theo isolate.
 
 ## Chi phí PhotoRoom tham khảo
 
