@@ -21,6 +21,9 @@
   let mode = "locked";
   let resultUrl = null;
   let processing = false;
+  let turnstileSiteKey = null;
+  let turnstileWidgetId = null;
+  let turnstileScriptPromise = null;
 
   function notice(message, state) {
     el.serviceNote.className = "service-note" + (state ? " " + state : "");
@@ -73,6 +76,7 @@
       const response = await fetch("/api/health", { cache: "no-store" });
       const data = await response.json();
       applyMode(data);
+      turnstileSiteKey = data.turnstileSiteKey || null;
 
       if (data.ready === true && mode === "adult") {
         notice("Bản thử nghiệm đã sẵn sàng. Chỉ chụp ảnh của chính người trưởng thành; ảnh sẽ được xử lý trực tuyến.", "ready");
@@ -174,6 +178,57 @@
     };
   }
 
+  async function loadTurnstile() {
+    if (window.turnstile) return;
+    if (!turnstileScriptPromise) {
+      turnstileScriptPromise = new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+        script.async = true;
+        script.defer = true;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error("Không tải được lớp xác thực bảo mật. Vui lòng thử lại."));
+        document.head.appendChild(script);
+      });
+    }
+    await turnstileScriptPromise;
+  }
+
+  async function getTurnstileToken() {
+    if (!turnstileSiteKey) throw new Error("Máy chủ chưa cấu hình xác thực bảo mật.");
+    await loadTurnstile();
+
+    return new Promise((resolve, reject) => {
+      let finished = false;
+      const finish = (callback, value) => {
+        if (finished) return;
+        finished = true;
+        clearTimeout(timer);
+        callback(value);
+      };
+      const timer = setTimeout(() => finish(reject, new Error("Xác thực bị quá thời gian. Vui lòng thử lại.")), 30000);
+
+      try {
+        if (turnstileWidgetId === null) {
+          turnstileWidgetId = window.turnstile.render(el.turnstileContainer, {
+            sitekey: turnstileSiteKey,
+            size: "invisible",
+            execution: "execute",
+            appearance: "interaction-only",
+            callback: token => finish(resolve, token),
+            "error-callback": () => finish(reject, new Error("Không xác thực được. Vui lòng thử lại.")),
+            "expired-callback": () => finish(reject, new Error("Mã xác thực đã hết hạn. Vui lòng thử lại."))
+          });
+        } else {
+          window.turnstile.reset(turnstileWidgetId);
+        }
+        window.turnstile.execute(turnstileWidgetId);
+      } catch (_) {
+        finish(reject, new Error("Không khởi động được xác thực bảo mật."));
+      }
+    });
+  }
+
   async function processPhoto(photo, profile) {
     if (processing) return;
     processing = true;
@@ -197,6 +252,8 @@
       body.append("photo", photo, "dau-an-ao-xanh.jpg");
       body.append("photoProfile", profile);
       body.append("consent", mode);
+      const turnstileToken = await getTurnstileToken();
+      body.append("cf-turnstile-response", turnstileToken);
 
       const response = await fetch("/api/process", {
         method: "POST",
