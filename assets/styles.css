@@ -116,12 +116,12 @@ footer small { max-width: 570px; margin: 0 auto; color: #9aa59c; font-size: 9px;
 }
 
 .turnstile-container {
-  position: fixed;
-  left: -10000px;
-  top: 0;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
+  position: relative;
+  z-index: 5;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
 }
 
 .privacy-link { color: #29694b; font-size: 11px; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
