@@ -8,10 +8,7 @@ const SECURITY_HEADERS = {
   "X-Frame-Options": "DENY",
   "X-Robots-Tag": "noindex, nofollow",
   "Cache-Control": "no-store",
-  // MediaPipe Selfie Segmentation compiles its model with WebAssembly.
-  // wasm-unsafe-eval permits WebAssembly compilation without enabling
-  // unrestricted JavaScript eval. Google Storage serves model assets.
-  "Content-Security-Policy": "default-src 'self'; img-src 'self' blob: data: https://cdn2.tuoitre.vn; media-src 'self' blob:; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+  "Content-Security-Policy": "default-src 'self'; img-src 'self' blob: data: https://insonnguyen.vn https://images.pexels.com; media-src 'self' blob:; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 };
 
 function secure(response) {
