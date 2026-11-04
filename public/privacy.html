@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
 <title>Thông tin xử lý ảnh | Dấu ấn Áo xanh</title>
-<link rel="stylesheet" href="/assets/styles.css?v=20261104-face-preserve">
+<link rel="stylesheet" href="/assets/styles.css?v=20261104-ai-background-upload-reprocess">
 <style>
 .policy{max-width:760px;margin:22px auto;padding:clamp(20px,5vw,34px);background:#fff;border:1px solid #e3ebe5;border-radius:18px;box-shadow:0 18px 50px rgba(20,47,34,.07)}
 .policy-kicker{color:#08794f;font-size:10px;font-weight:850;letter-spacing:.13em}
@@ -24,44 +24,42 @@
 <h1>Thông tin xử lý ảnh và quyền riêng tư</h1>
 <p>Ứng dụng có hai chế độ xử lý ảnh riêng biệt. Người dùng tự chọn chế độ trước khi mở camera. Chế độ gửi ảnh lên AI chỉ được thực hiện sau khi người dùng tick ô chấp thuận riêng.</p>
 
-<h2>1. Chế độ giữ nguyên khuôn mặt trên điện thoại (khuyên dùng)</h2>
+<h2>1. Chế độ AI tạo nền mới và giữ nguyên khuôn mặt (mặc định)</h2>
 <ol>
-<li>Camera hệ thống của điện thoại tạo ảnh sau khi người dùng cấp quyền.</li>
-<li>MediaPipe Selfie Segmentation chạy trong trình duyệt để nhận diện người và tạo vùng nền trong suốt.</li>
-<li>Phần người được lấy trực tiếp từ ảnh chụp gốc. Ứng dụng không dùng mô hình tạo sinh để vẽ lại khuôn mặt, tóc hoặc trang phục.</li>
-<li>Ảnh gốc và phần người đã tách không được tải lên máy chủ, không gửi tới Pexels.</li>
-<li>Trình duyệt chỉ gửi mã phông nền chung đã chọn tới máy chủ để nhận ảnh phong cảnh.</li>
-<li>Người và phong cảnh được ghép trên thiết bị bằng Canvas, xuất JPEG 1600 × 2000 px chất lượng cao. Đây là ghép 2D, không phải tái dựng toàn bộ không gian bằng AI.</li>
+<li>Camera điện thoại hoặc công cụ tải ảnh lên cung cấp ảnh gốc cho trình duyệt.</li>
+<li>MediaPipe Selfie Segmentation chạy trên thiết bị để nhận diện người và tạo mặt nạ tách nền.</li>
+<li>Trình duyệt chỉ gửi mã chủ đề phong cảnh, chế độ nền và số seed ngẫu nhiên tới máy chủ. Không gửi ảnh người, khuôn mặt hoặc phần người đã tách.</li>
+<li>Cloudflare Workers AI dùng mô hình FLUX.1 Schnell để tạo một ảnh phong cảnh mới từ câu lệnh mô tả. Mỗi lượt ghép có seed riêng để tạo biến thể mới.</li>
+<li>Ảnh người được ghép với nền AI ngay trên thiết bị bằng Canvas. Mô hình tạo nền không nhìn thấy ảnh người và không vẽ lại khuôn mặt.</li>
 </ol>
-<p>Ở chế độ này, khuôn mặt và màu sắc trong phần người được giữ từ ảnh chụp gốc, chỉ bị thay đổi do thao tác tách nền, thu phóng và nén JPEG khi xuất ảnh. Ảnh cá nhân chỉ nằm tạm trong bộ nhớ thiết bị khi trang còn mở. Website không lưu ảnh vào tài khoản, thư viện, cơ sở dữ liệu, KV, R2 hoặc ổ đĩa.</p>
+<p>Ảnh cá nhân ở lại trong bộ nhớ của trình duyệt khi phiên làm việc đang mở. Website không lưu ảnh vào tài khoản, thư viện, cơ sở dữ liệu, KV, R2 hoặc ổ đĩa. Ảnh gốc có thể bị thu phóng và nén JPEG khi xuất, nhưng không được đưa qua mô hình tạo sinh.</p>
 
-<h2>2. Chế độ AI sáng tạo toàn cảnh (miễn phí trong hạn mức)</h2>
+<h2>2. Chế độ dùng nền thư viện có sẵn</h2>
 <ol>
-<li>Người dùng phải chọn chế độ “AI phối cảnh chân thực hơn”, xác nhận quyền sử dụng ảnh và tick ô chấp thuận riêng việc gửi ảnh.</li>
-<li>Ảnh được thu nhỏ trên thiết bị để phù hợp giới hạn ảnh tham chiếu của mô hình rồi gửi qua HTTPS tới máy chủ Cloudflare của ứng dụng.</li>
-<li>Máy chủ tải ảnh phong cảnh đã chọn từ thư viện Pexels, sau đó gửi ảnh phong cảnh và ảnh người làm hai ảnh tham chiếu tới mô hình FLUX.2 Klein 4B thông qua Cloudflare Workers AI.</li>
-<li>Mô hình kết hợp chủ thể với cảnh, tạo lại bố cục, ánh sáng và phối cảnh rồi trả ảnh kết quả về trình duyệt.</li>
-<li>Ứng dụng không lưu ảnh đầu vào hoặc ảnh đầu ra vào thư viện, cơ sở dữ liệu, KV, R2 hoặc ổ đĩa của website.</li>
+<li>Người chụp được tách ngay trên điện thoại bằng MediaPipe Selfie Segmentation.</li>
+<li>Trình duyệt gửi mã nền được chọn tới máy chủ để nhận một ảnh phong cảnh cố định từ thư viện Pexels.</li>
+<li>Người trong ảnh được ghép trên thiết bị, không tải ảnh cá nhân lên máy chủ và không gửi ảnh đến Pexels.</li>
 </ol>
-<p><strong>Hạn mức:</strong> Cloudflare Workers AI cấp 10.000 neurons miễn phí mỗi ngày cho tài khoản Workers Free. Mô hình FLUX.2 Klein 4B tính mức sử dụng theo số ô ảnh đầu vào/đầu ra; với kích thước tham chiếu và đầu ra hiện tại, một ảnh ước tính khoảng 115 neurons. 50 lượt trong một ngày có thể dùng khoảng 5.750 neurons. Đây là ước tính, lượng thực tế có thể thay đổi theo kích thước xử lý, số lần thử và mức sử dụng AI khác trên cùng tài khoản. Hạn mức làm mới theo ngày UTC.</p>
-<p>Khi tài khoản hết hạn mức miễn phí, yêu cầu AI sẽ bị từ chối và ứng dụng không tự chuyển sang mô hình trả phí. Người dùng có thể chuyển sang chế độ riêng tư trên điện thoại hoặc thử lại sau khi hạn mức được làm mới.</p>
-<p>Cloudflare đánh dấu mô hình FLUX.2 Klein 4B có trạng thái Zero Data Retention (ZDR). Ứng dụng không ghi ảnh cá nhân vào kho lưu trữ của mình; quá trình truyền và xử lý vẫn diễn ra qua hạ tầng Cloudflare AI và đối tác mô hình theo tài liệu dịch vụ của họ.</p>
-<p>Mô hình có thể làm thay đổi một số chi tiết khuôn mặt, tóc, trang phục, tư thế hoặc hình thể dù đã được hướng dẫn giữ nguyên người trong ảnh. Kết quả không được đảm bảo giống hoàn toàn ảnh gốc. Hãy kiểm tra khuôn mặt và các chi tiết trước khi tải xuống hoặc chia sẻ.</p>
+<p>Chế độ này là phương án dự phòng khi AI tạo nền bận hoặc khi người dùng muốn dùng một phong cảnh cố định. Ảnh người vẫn được giữ từ ảnh gốc.</p>
+
+<h2>3. Hạn mức tạo nền AI</h2>
+<p>Cloudflare Workers AI cung cấp 10.000 neurons miễn phí mỗi ngày cho tài khoản Workers Free. Mô hình FLUX.1 Schnell tính mức sử dụng theo kích thước ảnh (512 × 512 tile) và số bước tạo. Ứng dụng dùng 6 bước cho mỗi nền; lượng sử dụng thực tế còn phụ thuộc kích thước ảnh được mô hình trả về và các tác vụ AI khác dùng chung tài khoản.</p>
+<p>Hạn mức làm mới lúc 00:00 UTC. Khi hết hạn mức hoặc mô hình tạm thời không sẵn sàng, ứng dụng sẽ báo lỗi và không tự chuyển sang dịch vụ trả phí. Người dùng có thể thử lại hoặc tự chọn chế độ nền thư viện.</p>
 
 <h2>3. Phông nền và nguồn ảnh</h2>
-<p>Thư viện gồm 11 ảnh phong cảnh chụp thật từ Pexels: ruộng bậc thang, đường đá bản làng, đường làng miền núi, lối mòn đồi xanh, cầu gỗ, lối vườn hoa, sân vườn nhà gỗ và bậc đá khô cạnh thác. Các cảnh được chọn để có mặt đường, lối đi, cầu, sân hoặc bề mặt đá làm vị trí đứng. Ở chế độ AI, mô hình được yêu cầu đặt cả hai chân lên bề mặt nhìn thấy được; tuyệt đối không chọn mặt nước làm nơi đứng. Ở chế độ riêng tư, ảnh nền được ghép nguyên trạng. Ở chế độ AI, ảnh phong cảnh được dùng làm ảnh tham chiếu để mô hình tái tạo và hòa phối; kết quả có thể không giống hoàn toàn thumbnail.</p>
+<p>Thư viện gồm 11 ảnh chụp thật từ Pexels để xem trước phong cách hoặc chọn làm nền cố định. Ở chế độ mặc định, thumbnail chỉ là gợi ý: AI tạo mới một phong cảnh khác cho mỗi lượt ghép. Ảnh nền AI có thể khác đôi chút so với ý tưởng hoặc bố cục yêu cầu. Ảnh người không được gửi lên mô hình tạo nền.</p>
 
 <h2>4. Quyền của người trong ảnh</h2>
 <ul>
 <li>Chỉ chụp và sử dụng ảnh của chính mình hoặc ảnh đã được người trong ảnh/người đại diện cho phép.</li>
-<li>Việc đồng ý sử dụng ảnh không tự động đồng nghĩa với việc đồng ý tải ảnh lên AI. Hai xác nhận được tách riêng.</li>
-<li>Với ảnh học sinh, chỉ sử dụng chế độ AI sau khi nhà trường xác định căn cứ xử lý, thông báo đầy đủ và có chấp thuận cần thiết của cha mẹ/người đại diện theo pháp luật.</li>
-<li>Người dùng có thể hủy thao tác hoặc chọn chế độ riêng tư không tải ảnh lên.</li>
+<li>Chế độ tạo nền AI chỉ gửi mô tả phong cảnh, không gửi ảnh người chụp lên mô hình tạo ảnh.</li>
+<li>Với ảnh học sinh, cần có chấp thuận phù hợp của cha mẹ/người đại diện theo pháp luật trước khi chụp, tải ảnh lên hoặc sử dụng ảnh.</li>
+<li>Người dùng có thể hủy thao tác hoặc chuyển sang nền thư viện cố định.</li>
 </ul>
 
 <h2>5. Lưu ảnh</h2>
 <p>Trên Android và máy tính, trình duyệt tải ảnh thành tệp JPEG. Trên iPhone/iPad, nút tải có thể mở bảng chia sẻ; người dùng chọn “Lưu hình ảnh” để lưu vào thiết bị.</p>
-<p class="warning">Tài liệu này mô tả luồng kỹ thuật của ứng dụng, không phải kết luận tuân thủ pháp luật hay tư vấn pháp lý. Nhà trường cần rà soát và phê duyệt nội dung, phương án xin chấp thuận và việc sử dụng dịch vụ AI bên ngoài trước khi công khai mã QR, đặc biệt khi có ảnh học sinh.</p>
+<p class="warning">Nền AI được tạo từ câu lệnh phong cảnh, không sử dụng ảnh người làm dữ liệu đầu vào. Ảnh người vẫn được xử lý trên thiết bị. Tài liệu này mô tả luồng kỹ thuật của ứng dụng, không phải kết luận tuân thủ pháp luật hay tư vấn pháp lý. Nhà trường cần rà soát việc sử dụng dịch vụ AI bên ngoài trước khi công khai mã QR, đặc biệt khi có ảnh học sinh.</p>
 <a class="back" href="/">← Quay lại check-in</a>
 </main>
 </body>
