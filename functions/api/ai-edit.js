@@ -187,6 +187,9 @@ export async function onRequestPost({ request, env }) {
     const message = detail.includes("background-reference-unavailable")
       ? "Không tải được ảnh phong cảnh mẫu. Vui lòng chọn bối cảnh khác hoặc thử lại."
       : "AI chỉnh ảnh miễn phí hiện đang bận hoặc đã hết hạn mức sử dụng trong ngày. Ứng dụng không tự chuyển sang dịch vụ trả phí. Bạn có thể thử lại sau hoặc chọn chế độ riêng tư trên điện thoại.";
-    return json({ message }, 503);
+    return json({
+      message,
+      errorCode: detail.slice(0, 180)
+    }, 503);
   }
 }
