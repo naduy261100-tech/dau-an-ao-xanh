@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Hair model diagnostic</title></head>
+<body>
+<h1>On-device hair segmentation diagnostic</h1>
+<p id="status">Starting…</p>
+<pre id="details"></pre>
+<img id="sample" crossorigin="anonymous" alt="Public portrait sample" style="max-width:240px;display:block">
+<script type="module">
+const status = document.getElementById("status");
+const details = document.getElementById("details");
+const report = (s, d="") => { status.textContent=s; details.textContent=d; };
+try {
+  report("Loading MediaPipe Tasks Vision…");
+  const { FilesetResolver, ImageSegmenter } = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/vision_bundle.mjs");
+  const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/wasm");
+  report("Downloading and initializing 512px HairSegmenter…");
+  const segmenter = await ImageSegmenter.createFromOptions(vision, {
+    baseOptions: {
+      modelAssetPath: "https://storage.googleapis.com/mediapipe-models/image_segmenter/hair_segmenter/float32/1/hair_segmenter.tflite",
+      delegate: "CPU"
+    },
+    runningMode: "IMAGE",
+    outputCategoryMask: false,
+    outputConfidenceMasks: true
+  });
+  const img = document.getElementById("sample");
+  img.src = "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1000";
+  await img.decode();
+  report("Running hair inference…");
+  const result = segmenter.segment(img);
+  const labels = segmenter.getLabels();
+  const index = Math.max(0, labels.findIndex(x => String(x).toLowerCase().includes("hair")));
+  const mask = result.confidenceMasks?.[index];
+  if (!mask) throw new Error("No hair confidence mask returned");
+  const values = mask.getAsFloat32Array();
+  let min = 1, max = 0, foreground = 0;
+  for (const value of values) { min = Math.min(min, value); max = Math.max(max, value); if (value > 0.5) foreground++; }
+  const detail = JSON.stringify({
+    labels, selectedIndex:index, maskWidth:mask.width, maskHeight:mask.height,
+    values:values.length, min,max,foregroundAboveHalf:foreground
+  }, null, 2);
+  mask.close();
+  for (const item of (result.confidenceMasks || [])) { try { item.close(); } catch (_) {} }
+  segmenter.close();
+  document.body.dataset.status = "pass";
+  report("PASS — HairSegmenter loaded and returned a valid mask.", detail);
+} catch (error) {
+  document.body.dataset.status = "fail";
+  report("FAIL — " + (error?.message || String(error)), error?.stack || "");
+}
+</script>
+</body></html>
