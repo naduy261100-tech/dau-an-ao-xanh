@@ -28,10 +28,10 @@ const BACKGROUNDS = {
     prompt: "Photorealistic editorial travel photograph of a calm emerald mountain lake in northern Vietnam, vertical 4:5 composition from a natural rocky lakeside viewpoint, a broad believable flat rock or shore area across the lower foreground where one standing visitor can be placed, limestone mountains and green islands across the water, soft bright daylight, natural reflections, true camera texture, no people, no boats, no signs, no text, no watermark."
   },
   "mist-lake": {
-    title: "Misty mountain lake",
-    author: "Linh Tran / Pexels",
-    url: "https://images.pexels.com/photos/34847656/pexels-photo-34847656.jpeg?auto=compress&cs=tinysrgb&w=1800",
-    prompt: "Photorealistic cinematic travel photograph of a misty mountain lake in Vietnam at sunrise, vertical 4:5 portrait frame, quiet shoreline and a natural standing area in the lower foreground, mist drifting through layered mountain slopes, soft diffused sunrise light, realistic water and atmospheric perspective, subtle colors, no people, no text, no graphics, no watermark."
+    title: "Forest mountain lake",
+    author: "Red Nguyen / Pexels",
+    url: "https://images.pexels.com/photos/17924726/pexels-photo-17924726.jpeg?auto=compress&cs=tinysrgb&w=1800",
+    prompt: "Photorealistic cinematic travel photograph of a mountain lake surrounded by lush green forest in Vietnam, vertical 4:5 portrait frame, quiet shoreline and a natural standing area in the lower foreground, mist drifting through layered mountain slopes, soft diffused sunrise light, realistic water and atmospheric perspective, subtle colors, no people, no text, no graphics, no watermark."
   },
   "waterfall": {
     title: "Forest waterfall",
