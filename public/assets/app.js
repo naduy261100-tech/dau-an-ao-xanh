@@ -1,19 +1,16 @@
 (() => {
   "use strict";
-
-  const $ = (id) => document.getElementById(id);
+  const $ = id => document.getElementById(id);
   const el = {
     consentScreen: $("consentScreen"),
     consentCheck: $("consentCheck"),
     agreeButton: $("agreeButton"),
+    sceneGrid: $("sceneGrid"),
     cameraScreen: $("cameraScreen"),
-    cameraVideo: $("cameraVideo"),
-    cameraLensLabel: $("cameraLensLabel"),
-    cameraBackBtn: $("cameraBackBtn"),
-    switchBtn: $("switchBtn"),
-    captureBtn: $("captureBtn"),
-    nativeCaptureControls: $("nativeCaptureControls"),
-    nativeCaptureBtn: $("nativeCaptureBtn"),
+    cameraStatusTitle: $("cameraStatusTitle"),
+    cameraStatusText: $("cameraStatusText"),
+    openCameraAgainBtn: $("openCameraAgainBtn"),
+    backToGalleryBtn: $("backToGalleryBtn"),
     nativeCameraInput: $("nativeCameraInput"),
     processingScreen: $("processingScreen"),
     processingTitle: $("processingTitle"),
@@ -24,15 +21,24 @@
     resultScreen: $("resultScreen"),
     resultImage: $("resultImage"),
     resultDescription: $("resultDescription"),
+    resultMeta: $("resultMeta"),
     downloadBtn: $("downloadBtn"),
     downloadHelp: $("downloadHelp"),
     retakeBtn: $("retakeBtn"),
     errorBox: $("errorBox")
   };
 
-  let stream = null;
-  let facingMode = "environment";
-  let activeFacing = "environment";
+  const SCENES = {
+    "rice-gold": { title: "Ruộng bậc thang vàng", author: "Quang Nguyen Vinh" },
+    "rice-green": { title: "Thung lũng ruộng xanh", author: "Duc Nguyen" },
+    "rice-path": { title: "Lối nhỏ giữa ruộng", author: "Ahmet Yüksek" },
+    "mountain-lake": { title: "Hồ núi xanh", author: "Quang Nguyen Vinh" },
+    "mist-lake": { title: "Hồ sương sớm", author: "Linh Tran" },
+    "waterfall": { title: "Thác giữa rừng", author: "Pexels" },
+    "forest-stream": { title: "Suối rừng xanh", author: "Ella Ragasa" }
+  };
+
+  let selectedScene = "rice-gold";
   let serviceReady = false;
   let consentAccepted = false;
   let processing = false;
@@ -47,17 +53,14 @@
     el.processingScreen.hidden = name !== "processing";
     el.resultScreen.hidden = name !== "result";
   }
-
   function showError(message) {
     el.errorBox.textContent = message;
     el.errorBox.hidden = false;
   }
-
   function clearError() {
     el.errorBox.textContent = "";
     el.errorBox.hidden = true;
   }
-
   function setProgress(percent, label, title, message) {
     el.progressFill.style.width = percent + "%";
     el.progressPercent.textContent = percent + "%";
@@ -70,12 +73,10 @@
     try {
       const response = await fetch("/api/health", { cache: "no-store" });
       if (!response.ok) throw new Error("Health check failed");
-      const data = await response.json();
-      serviceReady = data.ready === true;
-      el.agreeButton.disabled = !el.consentCheck.checked || !serviceReady;
-      if (!serviceReady) {
-        showError("Dịch vụ tạo phong cảnh đang tạm thời chưa sẵn sàng. Vui lòng thử lại sau.");
-      }
+      // The real-photo library keeps capture available even when the free
+      // generative model is temporarily busy or not configured.
+      serviceReady = true;
+      el.agreeButton.disabled = !el.consentCheck.checked;
     } catch (_) {
       serviceReady = false;
       el.agreeButton.disabled = true;
@@ -83,131 +84,34 @@
     }
   }
 
-  function stopCamera() {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      stream = null;
+  function selectScene(id) {
+    if (!SCENES[id]) return;
+    selectedScene = id;
+    for (const button of el.sceneGrid.querySelectorAll("[data-scene]")) {
+      const active = button.dataset.scene === id;
+      button.classList.toggle("is-selected", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
     }
-    if (el.cameraVideo) {
-      el.cameraVideo.pause();
-      el.cameraVideo.srcObject = null;
-    }
-  }
-
-  function delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
-
-  async function requestCamera(mode) {
-    const media = navigator.mediaDevices;
-    const dimensions = {
-      width: { ideal: 1440 },
-      height: { ideal: 1800 },
-      aspectRatio: { ideal: 0.8 }
-    };
-
-    try {
-      return await media.getUserMedia({
-        audio: false,
-        video: { ...dimensions, facingMode: { exact: mode } }
-      });
-    } catch (exactError) {
-      if (exactError?.name === "NotAllowedError" || exactError?.name === "PermissionDeniedError" ||
-          exactError?.name === "SecurityError" || exactError?.name === "NotReadableError") {
-        throw exactError;
-      }
-    }
-
-    let cameras = [];
-    try {
-      const devices = await media.enumerateDevices();
-      cameras = devices.filter(device => device.kind === "videoinput");
-    } catch (_) {}
-
-    if (!cameras.length) throw new Error("Trình duyệt không tìm thấy camera.");
-
-    const isRear = mode === "environment";
-    const pattern = isRear
-      ? /(back|rear|environment|world|sau|arrière|trasera|背面|外側)/i
-      : /(front|user|facetime|selfie|trước|前面|内側)/i;
-    let candidates = cameras.filter(device => pattern.test(device.label || ""));
-    if (!candidates.length) {
-      candidates = [isRear && cameras.length > 1 ? cameras[cameras.length - 1] : cameras[0]];
-    }
-
-    let lastError;
-    for (const camera of candidates) {
-      try {
-        return await media.getUserMedia({
-          audio: false,
-          video: { ...dimensions, deviceId: { exact: camera.deviceId } }
-        });
-      } catch (error) {
-        lastError = error;
-        if (error?.name === "NotAllowedError" || error?.name === "PermissionDeniedError") throw error;
-      }
-    }
-    throw lastError || new Error("Không mở được camera đã chọn.");
-  }
-
-  async function openCamera() {
     clearError();
+  }
+
+  function openNativeCamera() {
     if (!consentAccepted) {
       showScreen("consent");
       showError("Vui lòng xác nhận quyền sử dụng ảnh trước khi mở camera.");
       return;
     }
-    if (!serviceReady) {
-      showScreen("consent");
-      showError("Dịch vụ tạo phong cảnh đang tạm thời chưa sẵn sàng.");
-      return;
-    }
-    if (stream && stream.getVideoTracks().some(track => track.readyState === "live")) {
-      showScreen("camera");
-      await el.cameraVideo.play().catch(() => {});
-      return;
-    }
-    if (!navigator.mediaDevices?.getUserMedia) {
-      showScreen("camera");
-      el.nativeCaptureControls.hidden = false;
-      showError("Trình duyệt không hỗ trợ camera trực tiếp. Bạn có thể mở camera hệ thống bên dưới.");
-      return;
-    }
-
-    stopCamera();
-    try {
-      stream = await requestCamera(facingMode);
-      const track = stream.getVideoTracks()[0];
-      const settings = track?.getSettings ? track.getSettings() : {};
-      activeFacing = settings.facingMode || facingMode;
-      el.cameraVideo.srcObject = stream;
-      el.cameraVideo.classList.toggle("front-camera", activeFacing === "user");
-      await el.cameraVideo.play();
-
-      el.cameraLensLabel.textContent = activeFacing === "environment" ? "CAMERA SAU" : "CAMERA TRƯỚC";
-      el.nativeCaptureControls.hidden = true;
-      showScreen("camera");
-    } catch (error) {
-      stopCamera();
-      showScreen("camera");
-      el.nativeCaptureControls.hidden = false;
-      const denied = error?.name === "NotAllowedError" || error?.name === "PermissionDeniedError";
-      showError(denied
-        ? "Bạn chưa cấp quyền camera cho trình duyệt. Hãy cho phép quyền Camera trong cài đặt trình duyệt."
-        : (error instanceof Error ? error.message : "Không mở được camera. Vui lòng thử lại."));
-    }
+    clearError();
+    el.nativeCameraInput.value = "";
+    el.cameraStatusTitle.textContent = "Đang mở camera chụp ảnh…";
+    el.cameraStatusText.textContent = "Camera chụp ảnh của điện thoại sẽ xuất hiện. Chụp xong, ảnh sẽ tự chuyển sang bước AI xử lý.";
+    showScreen("camera");
+    // Call directly from the user gesture. No embedded video/player is used.
+    el.nativeCameraInput.click();
   }
 
-  function captureFrame() {
-    const video = el.cameraVideo;
-    if (!video.videoWidth || !video.videoHeight) {
-      throw new Error("Camera chưa sẵn sàng. Vui lòng đợi hình ảnh ổn định rồi chụp.");
-    }
-
-    // Capture exactly the portrait crop shown in the camera preview.
+  function cropToPortrait(sourceWidth, sourceHeight) {
     const targetAspect = 4 / 5;
-    const sourceWidth = video.videoWidth;
-    const sourceHeight = video.videoHeight;
     const sourceAspect = sourceWidth / sourceHeight;
     let sx = 0, sy = 0, sw = sourceWidth, sh = sourceHeight;
     if (sourceAspect > targetAspect) {
@@ -217,16 +121,52 @@
       sh = sourceWidth / targetAspect;
       sy = (sourceHeight - sh) / 2;
     }
+    return { sx, sy, sw, sh };
+  }
 
-    const canvas = document.createElement("canvas");
-    canvas.width = 1080;
-    canvas.height = 1350;
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    if (activeFacing === "user") {
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
+  async function imageFileToCanvas(file) {
+    const maxSide = 2048;
+    let source = null;
+    let sourceWidth = 0;
+    let sourceHeight = 0;
+    let closeSource = false;
+
+    if (typeof createImageBitmap === "function") {
+      try {
+        source = await createImageBitmap(file);
+        sourceWidth = source.width;
+        sourceHeight = source.height;
+        closeSource = true;
+      } catch (_) {}
     }
-    ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    if (!source) {
+      const objectUrl = URL.createObjectURL(file);
+      try {
+        const img = new Image();
+        img.decoding = "async";
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = () => reject(new Error("Không đọc được ảnh vừa chụp. Hãy thử chụp lại."));
+          img.src = objectUrl;
+        });
+        source = img;
+        sourceWidth = img.naturalWidth;
+        sourceHeight = img.naturalHeight;
+      } finally {
+        // Keep the object URL until the image has been drawn below.
+      }
+    }
+
+    if (!sourceWidth || !sourceHeight) throw new Error("Ảnh chụp không hợp lệ.");
+    const maxScale = Math.min(1, maxSide / Math.max(sourceWidth, sourceHeight));
+    const width = Math.max(2, Math.round(sourceWidth * maxScale));
+    const height = Math.max(2, Math.round(sourceHeight * maxScale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    canvas.getContext("2d", { willReadFrequently: true }).drawImage(source, 0, 0, width, height);
+    if (closeSource && typeof source.close === "function") source.close();
+    if (source instanceof HTMLImageElement && source.src.startsWith("blob:")) URL.revokeObjectURL(source.src);
     return canvas;
   }
 
@@ -234,7 +174,7 @@
     if (segmenterPromise) return segmenterPromise;
     segmenterPromise = (async () => {
       if (typeof window.SelfieSegmentation !== "function") {
-        throw new Error("Không tải được mô hình AI tách người. Hãy kiểm tra mạng và thử lại.");
+        throw new Error("Không tải được mô hình AI tách người. Hãy kiểm tra kết nối Internet và thử lại.");
       }
       const segmenter = new window.SelfieSegmentation({
         locateFile: file => "https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/" + file
@@ -263,9 +203,8 @@
         reject(error);
       });
     });
-
     if (!results?.segmentationMask) {
-      throw new Error("AI chưa nhận diện được người. Hãy đứng đủ sáng và chụp rõ người trong khung hình.");
+      throw new Error("AI chưa nhận diện được người. Hãy chụp đủ sáng, tránh để người khác che khuất.");
     }
 
     const width = sourceCanvas.width;
@@ -274,7 +213,9 @@
     maskCanvas.width = width;
     maskCanvas.height = height;
     const maskCtx = maskCanvas.getContext("2d", { willReadFrequently: true });
+    maskCtx.filter = "blur(1px)";
     maskCtx.drawImage(results.segmentationMask, 0, 0, width, height);
+    maskCtx.filter = "none";
     const mask = maskCtx.getImageData(0, 0, width, height).data;
 
     const cutout = document.createElement("canvas");
@@ -284,18 +225,17 @@
     ctx.drawImage(sourceCanvas, 0, 0);
     const image = ctx.getImageData(0, 0, width, height);
     const pixels = image.data;
-
     let minX = width, minY = height, maxX = -1, maxY = -1;
     let opaqueCount = 0;
+
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const i = (y * width + x) * 4;
-        const confidence = mask[i] / 255;
-        const t = Math.max(0, Math.min(1, (confidence - 0.13) / 0.67));
+        const probability = mask[i] / 255;
+        const t = Math.max(0, Math.min(1, (probability - 0.10) / 0.78));
         const alpha = t * t * (3 - 2 * t);
         pixels[i + 3] = Math.round(pixels[i + 3] * alpha);
-
-        if (alpha > 0.06) {
+        if (alpha > 0.04) {
           if (x < minX) minX = x;
           if (x > maxX) maxX = x;
           if (y < minY) minY = y;
@@ -306,11 +246,11 @@
     }
 
     if (maxX < minX || maxY < minY || opaqueCount < 1500) {
-      throw new Error("AI chưa tách được chủ thể rõ ràng. Hãy chụp đủ sáng, không để người khác che khuất.");
+      throw new Error("AI chưa tách được chủ thể rõ ràng. Hãy đứng cách nền một khoảng và chụp đủ sáng.");
     }
-
     ctx.putImageData(image, 0, 0);
-    const margin = Math.round(Math.max(width, height) * 0.012);
+
+    const margin = Math.round(Math.max(width, height) * 0.018);
     minX = Math.max(0, minX - margin);
     minY = Math.max(0, minY - margin);
     maxX = Math.min(width - 1, maxX + margin);
@@ -323,20 +263,20 @@
 
     return {
       canvas: trimmed,
-      touchesBottom: maxY >= height * 0.965,
+      touchesBottom: maxY >= height * 0.97,
       aspect: trimmed.height / trimmed.width
     };
   }
 
-  async function generateBackground() {
+  async function generateBackground(scene) {
     const response = await fetch("/api/background", {
       method: "POST",
       headers: { "content-type": "application/json" },
       cache: "no-store",
-      body: JSON.stringify({ scene: "rice" })
+      body: JSON.stringify({ scene })
     });
     if (!response.ok) {
-      let message = "Chưa tải được phong cảnh nền. Vui lòng thử lại.";
+      let message = "Chưa tải được phông nền. Vui lòng thử lại.";
       try {
         const data = await response.json();
         if (typeof data.message === "string") message = data.message;
@@ -360,6 +300,20 @@
     ctx.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
   }
 
+  function sampleLuminance(ctx, x, y, w, h) {
+    const sample = document.createElement("canvas");
+    sample.width = 24;
+    sample.height = 24;
+    const sctx = sample.getContext("2d", { willReadFrequently: true });
+    sctx.drawImage(ctx.canvas, x, y, w, h, 0, 0, 24, 24);
+    const data = sctx.getImageData(0, 0, 24, 24).data;
+    let sum = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      sum += 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
+    }
+    return sum / (24 * 24) / 255;
+  }
+
   async function compositeImage(background, person) {
     const width = 1080;
     const height = 1350;
@@ -368,91 +322,88 @@
     output.height = height;
     const ctx = output.getContext("2d");
 
-    // Use a photographic, full-bleed backdrop. Avoid artificial frames or stickers.
     drawCover(ctx, background, 0, 0, width, height);
 
-    // A restrained color grade helps the foreground sit in the same atmosphere.
-    const atmosphere = ctx.createLinearGradient(0, 0, 0, height);
-    atmosphere.addColorStop(0, "rgba(255,249,235,0.035)");
-    atmosphere.addColorStop(0.55, "rgba(235,242,226,0.015)");
-    atmosphere.addColorStop(1, "rgba(20,39,25,0.07)");
-    ctx.fillStyle = atmosphere;
-    ctx.fillRect(0, 0, width, height);
-
     const subject = person.canvas;
-    const fit = Math.min((width * 0.82) / subject.width, (height * 0.82) / subject.height);
+    const fit = Math.min((width * 0.78) / subject.width, (height * 0.84) / subject.height);
     const subjectWidth = subject.width * fit;
     const subjectHeight = subject.height * fit;
     const x = (width - subjectWidth) / 2;
-    const bottomMargin = person.touchesBottom ? 5 : 24;
+    const bottomMargin = person.touchesBottom ? 4 : 24;
     const y = height - subjectHeight - bottomMargin;
-    const footY = Math.min(height - 18, y + subjectHeight * 0.985);
+    const footY = Math.min(height - 8, y + subjectHeight * 0.985);
 
-    // Soft contact shadow at ground level prevents a flat cut-and-paste appearance.
+    // Contact shadow is deliberately subtle. Avoid outlining the whole cutout,
+    // which made the subject look like a sticker on the earlier version.
     ctx.save();
-    ctx.filter = "blur(20px)";
-    ctx.fillStyle = "rgba(17,28,18,0.28)";
+    const groundBrightness = sampleLuminance(ctx, width * 0.3, height * 0.84, width * 0.4, height * 0.12);
+    const shadowAlpha = Math.max(0.12, Math.min(0.27, 0.31 - groundBrightness * 0.16));
+    ctx.filter = "blur(18px)";
+    ctx.fillStyle = "rgba(12,22,14," + shadowAlpha.toFixed(3) + ")";
     ctx.beginPath();
-    ctx.ellipse(width / 2 + subjectWidth * 0.025, footY, Math.max(55, subjectWidth * 0.28), Math.max(10, subjectWidth * 0.035), 0, 0, Math.PI * 2);
+    ctx.ellipse(width / 2 + subjectWidth * 0.025, footY, Math.max(45, subjectWidth * 0.24), Math.max(10, subjectWidth * 0.025), 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
-    // A low-opacity cast shadow follows the person's silhouette.
+    // Draw the subject only once with a restrained contact shadow.
     ctx.save();
-    ctx.shadowColor = "rgba(12,27,18,0.27)";
-    ctx.shadowBlur = 18;
-    ctx.shadowOffsetX = 7;
-    ctx.shadowOffsetY = 12;
+    ctx.shadowColor = "rgba(10,24,15,0.18)";
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetY = 4;
+    const subjectBrightness = sampleLuminanceFromCanvas(subject);
+    const adjust = Math.max(0.93, Math.min(1.06, 1 + (0.48 - groundBrightness) * 0.12));
+    ctx.filter = "brightness(" + adjust.toFixed(3) + ") contrast(1.015) saturate(0.97)";
     ctx.drawImage(subject, x, y, subjectWidth, subjectHeight);
     ctx.restore();
-
-    // Gently harmonize contrast and saturation without recoloring skin or clothing.
-    ctx.save();
-    ctx.filter = "brightness(1.025) contrast(1.015) saturate(0.96)";
-    ctx.drawImage(subject, x, y, subjectWidth, subjectHeight);
-    ctx.restore();
-
-    // Very light final tone curve; keep the photograph natural.
-    const finish = ctx.createLinearGradient(0, 0, width, height);
-    finish.addColorStop(0, "rgba(246,239,219,0.015)");
-    finish.addColorStop(1, "rgba(7,25,15,0.045)");
-    ctx.fillStyle = finish;
-    ctx.fillRect(0, 0, width, height);
 
     return new Promise((resolve, reject) => {
-      output.toBlob(blob => {
-        if (blob) resolve(blob);
-        else reject(new Error("Không xuất được ảnh hoàn chỉnh."));
-      }, "image/jpeg", 0.95);
+      output.toBlob(blob => blob ? resolve(blob) : reject(new Error("Không xuất được ảnh hoàn chỉnh.")), "image/jpeg", 0.95);
     });
   }
 
-  async function processPhoto(sourceCanvas) {
+  function sampleLuminanceFromCanvas(canvas) {
+    const sample = document.createElement("canvas");
+    sample.width = 24;
+    sample.height = 24;
+    const ctx = sample.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(canvas, 0, 0, 24, 24);
+    const d = ctx.getImageData(0, 0, 24, 24).data;
+    let sum = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const a = d[i + 3] / 255;
+      if (a > 0.7) sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+    }
+    return sum / (24 * 24) / 255;
+  }
+
+  async function processPhoto(file) {
     if (processing) return;
     processing = true;
     clearError();
-    stopCamera();
     showScreen("processing");
-    setProgress(12, "ĐANG PHÂN TÍCH ẢNH", "AI đang xử lý hình ảnh…", "Đang nhận diện chủ thể và tách người khỏi phông nền ngay trên điện thoại.");
-
+    setProgress(10, "ĐANG ĐỌC ẢNH", "AI đang xử lý hình ảnh…", "Đang đọc ảnh chụp và chuẩn bị nhận diện chủ thể.");
     let background = null;
     try {
+      const sourceCanvas = await imageFileToCanvas(file);
+      setProgress(28, "ĐANG TÁCH NGƯỜI", "AI đang tách chủ thể…", "Mô hình nhận diện người chạy ngay trên thiết bị của bạn.");
       const person = await makePersonCutout(sourceCanvas);
-      setProgress(42, "ĐANG TẠO PHONG CẢNH", "Chủ thể đã được tách nền", "Đang chuẩn bị phong cảnh Tuyên Quang phù hợp để ghép ảnh.");
-      background = await generateBackground();
-      setProgress(76, "ĐANG PHỐI CẢNH & ÁNH SÁNG", "AI đang hoàn thiện bức ảnh…", "Đang căn chỉnh tỷ lệ, tạo bóng tiếp xúc và hòa sắc giữa người với phong cảnh.");
+      setProgress(55, "ĐANG CHUẨN BỊ PHÔNG NỀN", "Chủ thể đã được tách", "Đang tải bối cảnh bạn đã chọn và căn chỉnh bố cục.");
+      background = await generateBackground(selectedScene);
+      setProgress(78, "ĐANG PHỐI GHÉP", "Đang hòa phối chủ thể và phong cảnh…", "Hệ thống căn chỉnh kích thước, bóng tiếp xúc và sắc độ tổng thể.");
       const output = await compositeImage(background.bitmap, person);
-
-      if (resultUrl) URL.revokeObjectURL(resultUrl);
+      clearResult();
       resultBlob = output;
       resultUrl = URL.createObjectURL(output);
       el.resultImage.src = resultUrl;
-      el.resultDescription.textContent = background.source === "photo-fallback"
-        ? "AI đã tách chủ thể và phối ghép với ảnh phong cảnh thật. Bạn có thể tải ảnh hoặc chụp lại."
-        : "AI đã tách chủ thể, tạo phong cảnh và phối ghép hoàn chỉnh. Bạn có thể tải ảnh hoặc chụp lại.";
-      el.downloadHelp.textContent = "Ảnh hoàn chỉnh được lưu trực tiếp về thiết bị, không lưu trên website.";
-      setProgress(100, "HOÀN TẤT", "Bức ảnh đã sẵn sàng!", "Bạn có thể tải ảnh về hoặc chụp lại ngay.");
-      await delay(350);
+      const scene = SCENES[selectedScene];
+      if (background.source === "flux-ai") {
+        el.resultDescription.textContent = "AI đã tách chủ thể và tạo phông nền theo bối cảnh bạn chọn.";
+      } else {
+        el.resultDescription.textContent = "AI đã tách chủ thể và phối ghép với ảnh phong cảnh chụp thật bạn đã chọn.";
+      }
+      el.resultMeta.textContent = "Phông nền: " + scene.title + (background.attribution ? " · Ảnh: " + background.attribution : "");
+      setProgress(100, "HOÀN TẤT", "Bức ảnh đã sẵn sàng!", "Bạn có thể tải ảnh về hoặc chụp lại bằng camera điện thoại.");
+      await delay(300);
       showScreen("result");
     } catch (error) {
       showScreen("consent");
@@ -460,60 +411,11 @@
     } finally {
       if (background?.bitmap && typeof background.bitmap.close === "function") background.bitmap.close();
       processing = false;
-      el.captureBtn.disabled = false;
     }
   }
 
-  async function downloadResult() {
-    if (!resultBlob || !resultUrl || downloadBusy) return;
-    downloadBusy = true;
-    el.downloadBtn.disabled = true;
-    const filename = "Dau-an-Ao-xanh-Minh-Khuong-" + new Date().toISOString().slice(0, 10) + ".jpg";
-
-    try {
-      const file = new File([resultBlob], filename, { type: "image/jpeg" });
-      const isAppleMobile = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
-        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-
-      // iOS Safari handles a generated image most reliably through its native
-      // share sheet, where the user can choose "Save Image".
-      if (isAppleMobile && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file], title: "Dấu ấn Áo xanh – Minh Khương" });
-          el.downloadHelp.textContent = "Đã mở bảng chia sẻ. Chọn “Lưu hình ảnh” để lưu ảnh vào điện thoại.";
-          return;
-        } catch (error) {
-          if (error?.name === "AbortError") return;
-          // Fall through to the regular file download.
-        }
-      }
-
-      const link = document.createElement("a");
-      link.href = resultUrl;
-      link.download = filename;
-      link.rel = "noopener";
-      link.style.display = "none";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-
-      if (!("download" in HTMLAnchorElement.prototype)) {
-        window.open(resultUrl, "_blank", "noopener");
-        el.downloadHelp.textContent = "Ảnh đã mở ở thẻ mới. Nhấn giữ ảnh rồi chọn “Lưu hình ảnh”.";
-      } else {
-        el.downloadHelp.textContent = "Đã gửi lệnh tải ảnh. Kiểm tra thư mục Tải xuống hoặc Ảnh trên thiết bị.";
-      }
-    } catch (_) {
-      try {
-        window.open(resultUrl, "_blank", "noopener");
-        el.downloadHelp.textContent = "Ảnh đã mở ở thẻ mới. Nhấn giữ ảnh rồi chọn “Lưu hình ảnh”.";
-      } catch (_) {
-        showError("Không mở được ảnh để tải. Hãy nhấn giữ ảnh xem trước và chọn lưu hình ảnh.");
-      }
-    } finally {
-      el.downloadBtn.disabled = false;
-      downloadBusy = false;
-    }
+  function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   function clearResult() {
@@ -523,109 +425,102 @@
     el.resultImage.removeAttribute("src");
   }
 
+  async function downloadResult() {
+    if (!resultBlob || !resultUrl || downloadBusy) return;
+    downloadBusy = true;
+    el.downloadBtn.disabled = true;
+    const filename = "Dau-an-Ao-xanh-Minh-Khuong-" + new Date().toISOString().slice(0, 10) + ".jpg";
+    try {
+      const file = new File([resultBlob], filename, { type: "image/jpeg" });
+      const isAppleMobile = /iPhone|iPad|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+      if (isAppleMobile && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: "Dấu ấn Áo xanh – Minh Khương" });
+          el.downloadHelp.textContent = "Đã mở bảng chia sẻ. Chọn “Lưu hình ảnh” để lưu ảnh vào điện thoại.";
+          return;
+        } catch (error) {
+          if (error?.name === "AbortError") return;
+        }
+      }
+      const link = document.createElement("a");
+      link.href = resultUrl;
+      link.download = filename;
+      link.rel = "noopener";
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      if (!("download" in HTMLAnchorElement.prototype)) {
+        window.open(resultUrl, "_blank", "noopener");
+        el.downloadHelp.textContent = "Ảnh đã mở ở thẻ mới. Nhấn giữ ảnh rồi chọn “Lưu hình ảnh”.";
+      } else {
+        el.downloadHelp.textContent = "Đã gửi lệnh tải ảnh. Kiểm tra thư mục Tải xuống hoặc Ảnh trên thiết bị.";
+      }
+    } catch (_) {
+      window.open(resultUrl, "_blank", "noopener");
+      el.downloadHelp.textContent = "Ảnh đã mở ở thẻ mới. Nhấn giữ ảnh rồi chọn “Lưu hình ảnh”.";
+    } finally {
+      el.downloadBtn.disabled = false;
+      downloadBusy = false;
+    }
+  }
+
+  el.sceneGrid.addEventListener("click", event => {
+    const button = event.target.closest("[data-scene]");
+    if (button) selectScene(button.dataset.scene);
+  });
+
   el.consentCheck.addEventListener("change", () => {
     el.agreeButton.disabled = !el.consentCheck.checked || !serviceReady;
     clearError();
   });
 
-  el.agreeButton.addEventListener("click", async () => {
+  el.agreeButton.addEventListener("click", () => {
     if (!el.consentCheck.checked) {
-      showError("Vui lòng tích xác nhận trước khi mở camera.");
+      showError("Vui lòng xác nhận quyền sử dụng ảnh trước khi mở camera.");
+      return;
+    }
+    if (!serviceReady) {
+      showError("Dịch vụ chưa kết nối. Vui lòng kiểm tra Internet rồi thử lại.");
       return;
     }
     consentAccepted = true;
-    await openCamera();
+    openNativeCamera();
   });
 
-  el.switchBtn.addEventListener("click", async () => {
-    facingMode = facingMode === "environment" ? "user" : "environment";
-    stopCamera();
-    await delay(160);
-    await openCamera();
-  });
-
-  el.cameraBackBtn.addEventListener("click", () => {
-    stopCamera();
+  el.openCameraAgainBtn.addEventListener("click", openNativeCamera);
+  el.backToGalleryBtn.addEventListener("click", () => {
+    showScreen("consent");
     consentAccepted = false;
     el.consentCheck.checked = false;
-    el.agreeButton.disabled = !el.consentCheck.checked || !serviceReady;
-    showScreen("consent");
+    el.agreeButton.disabled = !serviceReady;
     clearError();
-  });
-
-  el.captureBtn.addEventListener("click", async () => {
-    try {
-      const frame = captureFrame();
-      el.captureBtn.disabled = true;
-      await processPhoto(frame);
-    } catch (error) {
-      el.captureBtn.disabled = false;
-      showError(error instanceof Error ? error.message : "Không chụp được ảnh.");
-    }
-  });
-
-  el.nativeCaptureBtn.addEventListener("click", () => {
-    clearError();
-    el.nativeCameraInput.click();
   });
 
   el.nativeCameraInput.addEventListener("change", async () => {
     const file = el.nativeCameraInput.files?.[0];
     if (!file) return;
-    try {
-      let canvas;
-      if (typeof createImageBitmap === "function") {
-        const bitmap = await createImageBitmap(file);
-        canvas = document.createElement("canvas");
-        canvas.width = 1080;
-        canvas.height = 1350;
-        const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        const sourceAspect = bitmap.width / bitmap.height;
-        const targetAspect = 4 / 5;
-        let sx = 0, sy = 0, sw = bitmap.width, sh = bitmap.height;
-        if (sourceAspect > targetAspect) {
-          sw = bitmap.height * targetAspect;
-          sx = (bitmap.width - sw) / 2;
-        } else {
-          sh = bitmap.width / targetAspect;
-          sy = (bitmap.height - sh) / 2;
-        }
-        ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-        bitmap.close?.();
-      } else {
-        const imageUrl = URL.createObjectURL(file);
-        const image = new Image();
-        await new Promise((resolve, reject) => {
-          image.onload = resolve;
-          image.onerror = reject;
-          image.src = imageUrl;
-        });
-        canvas = document.createElement("canvas");
-        canvas.width = 1080;
-        canvas.height = 1350;
-        canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
-        URL.revokeObjectURL(imageUrl);
-      }
-      await processPhoto(canvas);
-    } catch (error) {
+    if (!file.type.startsWith("image/")) {
       showScreen("camera");
-      showError(error instanceof Error ? error.message : "Không đọc được ảnh từ camera điện thoại.");
-    } finally {
-      el.nativeCameraInput.value = "";
+      showError("Tệp bạn chọn không phải là ảnh. Vui lòng chụp lại.");
+      return;
     }
+    await processPhoto(file);
+    el.nativeCameraInput.value = "";
+  });
+
+  el.nativeCameraInput.addEventListener("cancel", () => {
+    showScreen("consent");
+    showError("Bạn đã hủy chụp ảnh. Chọn phông nền rồi nhấn mở camera để thử lại.");
   });
 
   el.downloadBtn.addEventListener("click", downloadResult);
-
-  el.retakeBtn.addEventListener("click", async () => {
+  el.retakeBtn.addEventListener("click", () => {
     clearResult();
-    await openCamera();
+    openNativeCamera();
   });
-
-  window.addEventListener("pagehide", () => {
-    stopCamera();
-    clearResult();
-  });
+  window.addEventListener("pagehide", clearResult);
 
   checkService();
 })();
