@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#ffffff">
   <meta name="description" content="Dấu ấn Áo xanh — Check-in AI của Chi đoàn Trường Tiểu học Minh Khương.">
   <title>Dấu ấn Áo xanh | Check-in AI Minh Khương</title>
-  <link rel="stylesheet" href="/assets/styles.css?v=20261104-face-preserve">
+  <link rel="stylesheet" href="/assets/styles.css?v=20261104-ai-background-upload-reprocess">
 </head>
 <body>
   <main class="app-shell">
@@ -28,7 +28,7 @@
       <div class="hero-copy">
         <div class="section-eyebrow"><span class="live-dot"></span> CHECK-IN AI MINH KHƯƠNG</div>
         <h2>Lưu lại khoảnh khắc<br><span>theo cách của bạn.</span></h2>
-        <p>Chọn một phông nền phong cảnh, mở camera chụp ảnh và để hệ thống tách người, phối ghép tự động.</p>
+        <p>Chọn phong cách phong cảnh, chụp hoặc tải ảnh lên. AI tạo một phông nền mới cho mỗi lượt ghép; khuôn mặt được giữ trực tiếp từ ảnh gốc trên thiết bị.</p>
       </div>
 
       <section class="background-picker" aria-labelledby="backgroundTitle">
@@ -85,7 +85,7 @@
             <span class="scene-name">Thác rừng trên bậc đá</span><span class="scene-subtitle">Bậc đá khô cạnh thác</span>
           </button>
         </div>
-        <p class="photo-note">Mỗi cảnh đều có mặt đường, lối đi, cầu, sân hoặc bậc đá để người đứng đúng vị trí. AI được yêu cầu đặt cả hai chân trên bề mặt nhìn thấy được, không đứng trên mặt nước.</p>
+        <p class="photo-note">Các hình nhỏ là gợi ý phong cách. Ở chế độ mặc định, AI sẽ tạo một phong cảnh mới theo chủ đề đã chọn cho mỗi lượt ghép, không lấy nguyên ảnh thumbnail.</p>
       </section>
 
       <section class="mode-picker" aria-labelledby="modeTitle">
@@ -93,21 +93,21 @@
           <span class="picker-kicker">CÁCH XỬ LÝ ẢNH</span>
           <h3 id="modeTitle">Bạn muốn xử lý ảnh theo cách nào?</h3>
         </div>
-        <div class="mode-options" role="group" aria-label="Chọn chế độ xử lý ảnh">
-          <button class="mode-card is-selected" type="button" data-mode="private" aria-pressed="true">
-            <span class="mode-card-icon">▣</span>
-            <span class="mode-card-title">Giữ nguyên khuôn mặt</span>
-            <span class="mode-card-copy">Tách nền và ghép cảnh ngay trên điện thoại. Không dùng AI tạo sinh để vẽ lại khuôn mặt hay trang phục.</span>
-            <span class="mode-card-tag">Khuyên dùng · Ảnh không rời thiết bị</span>
-          </button>
-          <button class="mode-card" type="button" data-mode="ai" aria-pressed="false">
+        <div class="mode-options" role="group" aria-label="Chọn cách tạo phông nền">
+          <button class="mode-card is-selected" type="button" data-mode="ai-background" aria-pressed="true">
             <span class="mode-card-icon">✦</span>
-            <span class="mode-card-title">AI sáng tạo toàn cảnh</span>
-            <span class="mode-card-copy">AI vẽ lại cả người và bối cảnh để hòa phối. Có thể làm khác khuôn mặt, tóc hoặc trang phục.</span>
-            <span class="mode-card-tag">Tùy chọn · Có gửi ảnh lên AI</span>
+            <span class="mode-card-title">AI tạo nền mới · Giữ khuôn mặt</span>
+            <span class="mode-card-copy">Mỗi lượt ghép, AI tạo một phong cảnh mới theo chủ đề. Ảnh người được giữ từ ảnh gốc và ghép trên điện thoại.</span>
+            <span class="mode-card-tag">Khuyên dùng · Không gửi ảnh người lên AI</span>
+          </button>
+          <button class="mode-card" type="button" data-mode="library" aria-pressed="false">
+            <span class="mode-card-icon">▣</span>
+            <span class="mode-card-title">Dùng nền thư viện có sẵn</span>
+            <span class="mode-card-copy">Dùng ảnh phong cảnh cố định trong thư viện. Người chụp vẫn được lấy trực tiếp từ ảnh gốc.</span>
+            <span class="mode-card-tag">Dự phòng · Giữ nguyên khuôn mặt</span>
           </button>
         </div>
-        <p class="mode-disclaimer" id="modeDisclaimer">Đang chọn chế độ giữ nguyên khuôn mặt: người trong ảnh được lấy trực tiếp từ ảnh gốc, chỉ tách nền và ghép cảnh. Muốn giữ đúng diện mạo, hãy dùng chế độ này.</p>
+        <p class="mode-disclaimer" id="modeDisclaimer">Mặc định: AI tạo một phong cảnh mới cho mỗi lần ghép. Ảnh người không gửi lên máy chủ; chỉ mã chủ đề và câu lệnh tạo nền được gửi tới Cloudflare AI.</p>
       </section>
 
       <div class="privacy-panel">
@@ -115,7 +115,7 @@
         <div>
           <strong id="privacyTitle">Ảnh gốc được giữ trên điện thoại</strong>
           <p id="privacyMessage">Ảnh cá nhân không tải lên máy chủ. Máy chủ chỉ nhận mã phông nền đã chọn.</p>
-          <a href="/privacy.html?v=20261104-face-preserve" target="_blank" rel="noopener">Xem thông tin xử lý ảnh và quyền riêng tư ↗</a>
+          <a href="/privacy.html?v=20261104-ai-background-upload-reprocess" target="_blank" rel="noopener">Xem thông tin xử lý ảnh và quyền riêng tư ↗</a>
         </div>
       </div>
 
@@ -125,16 +125,15 @@
         <span class="consent-text">Tôi là người trong ảnh hoặc đã được người trong ảnh/người đại diện cho phép sử dụng ảnh này và đồng ý xử lý theo chế độ đã chọn.</span>
       </label>
 
-      <label class="consent-check ai-upload-consent" id="aiConsentRow" for="aiUploadConsent" hidden>
-        <input type="checkbox" id="aiUploadConsent">
-        <span class="custom-check" aria-hidden="true"></span>
-        <span class="consent-text">Tôi đồng ý gửi ảnh chụp của mình qua Cloudflare AI để mô hình FLUX.2 Klein 4B kết hợp với ảnh phong cảnh đã chọn. Tôi hiểu AI có thể làm thay đổi một số chi tiết khuôn mặt hoặc trang phục. Ảnh được gửi tới dịch vụ bên ngoài để xử lý; chức năng miễn phí trong hạn mức 10.000 neurons/ngày của tài khoản Cloudflare (ước tính khoảng 50 lượt/ngày ở kích thước hiện tại, dùng chung với các tác vụ AI khác). Khi hết hạn mức, ứng dụng sẽ dừng xử lý AI và không tự chuyển sang dịch vụ trả phí.</span>
-      </label>
+
 
       <button class="button button-primary agree-button" id="agreeButton" type="button" disabled>
         ĐỒNG Ý & MỞ CAMERA <span aria-hidden="true">→</span>
       </button>
-      <p class="consent-footnote">Camera chụp ảnh của điện thoại sẽ được mở trực tiếp, không dùng trình phát video trên website. Với ảnh học sinh, cần có chấp thuận phù hợp của người đại diện.</p>
+      <button class="button button-secondary upload-photo-button" id="uploadPhotoBtn" type="button" disabled>TẢI ẢNH LÊN ĐỂ GHÉP</button>
+      <p class="saved-photo-notice" id="savedPhotoNotice" hidden>Đã giữ ảnh vừa chụp trong phiên này. Chọn một phong cảnh khác rồi ghép lại, không cần chụp lại.</p>
+      <button class="button button-secondary reprocess-button" id="reprocessBtn" type="button" hidden>GHÉP LẠI ẢNH NÀY VỚI CẢNH ĐÃ CHỌN</button>
+      <p class="consent-footnote">Có thể mở camera để chụp mới hoặc tải ảnh có sẵn. Chế độ mặc định chỉ gửi yêu cầu tạo phông nền, không tải ảnh người lên AI. Với ảnh học sinh, cần có chấp thuận phù hợp của người đại diện.</p>
     </section>
 
     <section class="screen camera-screen" id="cameraScreen" hidden>
@@ -144,6 +143,7 @@
         <h2 id="cameraStatusTitle">Đang mở camera chụp ảnh…</h2>
         <p id="cameraStatusText">Máy ảnh của điện thoại sẽ hiện ra ở chế độ chụp ảnh. Chụp xong, ảnh sẽ tự chuyển sang bước AI xử lý.</p>
         <button class="button button-primary" id="openCameraAgainBtn" type="button">MỞ CAMERA CHỤP ẢNH</button>
+        <button class="button button-secondary" id="uploadPhotoCameraBtn" type="button">CHỌN ẢNH TỪ THIẾT BỊ</button>
         <button class="text-button" id="backToGalleryBtn" type="button">← Quay lại chọn phông nền</button>
       </div>
     </section>
@@ -183,20 +183,22 @@
           <span>↻</span> CHỤP LẠI
         </button>
       </div>
+      <button class="button button-secondary choose-scene-button" id="chooseSceneBtn" type="button">← QUAY LẠI CHỌN CẢNH KHÁC</button>
       <p class="download-help" id="downloadHelp">Ảnh hoàn chỉnh sẽ được lưu trực tiếp về thiết bị.</p>
     </section>
 
     <input id="nativeCameraInput" type="file" accept="image/*" capture="environment" hidden>
+    <input id="uploadPhotoInput" type="file" accept="image/*" hidden>
     <div class="error-box" id="errorBox" role="alert" aria-live="polite" hidden></div>
 
     <footer class="app-footer">
       <span class="footer-brand">DẤU ẤN ÁO XANH <i>·</i> MINH KHƯƠNG</span>
       <span><strong>Tác giả:</strong> Chi Đoàn trường Tiểu học Minh Khương</span>
-      <span><strong>Admin:</strong> Nguyễn Anh Duy</span>
-      <small>Ảnh gốc được xử lý trên thiết bị. Không lưu trữ ảnh cá nhân trên website.</small>
+      <span><strong>Thầy:</strong> Nguyễn Anh Duy</span>
+      <small>Ảnh người được xử lý trên thiết bị; chỉ yêu cầu tạo phông nền AI được gửi lên máy chủ. Website không lưu ảnh cá nhân.</small>
     </footer>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/selfie_segmentation.js" crossorigin="anonymous" defer></script>
-  <script src="/assets/app.js?v=20261104-face-preserve" defer></script>
+  <script src="/assets/app.js?v=20261104-ai-background-upload-reprocess" defer></script>
 </body>
 </html>
