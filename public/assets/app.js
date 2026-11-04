@@ -59,9 +59,9 @@
   let serviceReady = false;
   let consentAccepted = false;
   let processing = false;
-  let segmenterPromise = null;
-  let hairSegmenterPromise = null;
-  let hairSegmenterInstance = null;
+  let matteRemoverPromise = null;
+  let matteRemoverInstance = null;
+  let matteModelName = "";
   let resultBlob = null;
   let resultUrl = null;
   let downloadBusy = false;
@@ -231,96 +231,68 @@
     return canvas;
   }
 
-  async function createSegmenter() {
-    if (segmenterPromise) return segmenterPromise;
-    segmenterPromise = (async () => {
-      if (typeof window.SelfieSegmentation !== "function") {
-        throw new Error("Không tải được mô hình AI tách người. Hãy kiểm tra kết nối Internet và thử lại.");
-      }
-      const segmenter = new window.SelfieSegmentation({
-        locateFile: file => "https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/" + file
-      });
-      await segmenter.setOptions({ modelSelection: 0 });
-      return segmenter;
-    })();
+  async function createMattingEngine(onProgress) {
+    if (matteRemoverInstance) return matteRemoverInstance;
+    if (!matteRemoverPromise) {
+      matteRemoverPromise = (async () => {
+        const { BackgroundRemover } = await import(
+          "https://cdn.jsdelivr.net/npm/@katana-video/web-bg-removal@0.1.1/+esm"
+        );
+        try {
+          const remover = await BackgroundRemover.load("longpipe-xl", {
+            backend: "auto",
+            dtype: "auto",
+            onProgress: fraction => onProgress?.(fraction, "Longpipe XL")
+          });
+          matteModelName = "Longpipe XL · 1280 × 768";
+          return remover;
+        } catch (xlError) {
+          // Smaller person-matting fallback for devices with limited GPU memory.
+          const remover = await BackgroundRemover.load("longpipe-large", {
+            backend: "auto",
+            dtype: "auto",
+            onProgress: fraction => onProgress?.(fraction, "Longpipe Large")
+          });
+          matteModelName = "Longpipe Large · 640 × 400";
+          return remover;
+        }
+      })();
+    }
     try {
-      return await segmenterPromise;
+      matteRemoverInstance = await matteRemoverPromise;
+      return matteRemoverInstance;
     } catch (error) {
-      segmenterPromise = null;
-      throw error;
+      matteRemoverPromise = null;
+      matteRemoverInstance = null;
+      matteModelName = "";
+      const detail = error instanceof Error ? error.message : String(error || "");
+      throw new Error("Không tải được mô hình tách ảnh chất lượng cao. Hãy kiểm tra Internet và thử lại. " + detail);
     }
   }
 
-
-  async function createHairSegmenter() {
-    if (hairSegmenterPromise) return hairSegmenterPromise;
-    hairSegmenterPromise = (async () => {
-      const visionModule = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/vision_bundle.mjs");
-      const vision = await visionModule.FilesetResolver.forVisionTasks(
-        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/wasm"
-      );
-      const modelAssetPath = "https://storage.googleapis.com/mediapipe-models/image_segmenter/hair_segmenter/float32/1/hair_segmenter.tflite";
-      let task;
-      try {
-        task = await visionModule.ImageSegmenter.createFromOptions(vision, {
-          baseOptions: { modelAssetPath, delegate: "GPU" },
-          runningMode: "IMAGE",
-          outputCategoryMask: false,
-          outputConfidenceMasks: true
-        });
-      } catch (_) {
-        task = await visionModule.ImageSegmenter.createFromOptions(vision, {
-          baseOptions: { modelAssetPath, delegate: "CPU" },
-          runningMode: "IMAGE",
-          outputCategoryMask: false,
-          outputConfidenceMasks: true
-        });
-      }
-      hairSegmenterInstance = task;
-      return task;
-    })();
-    try {
-      return await hairSegmenterPromise;
-    } catch (error) {
-      hairSegmenterPromise = null;
-      hairSegmenterInstance = null;
-      throw error;
-    }
-  }
-
-  function sampleFloatMask(values, mw, mh, x, y, sw, sh) {
-    const fx = Math.max(0, Math.min(mw - 1, ((x + 0.5) * mw / sw) - 0.5));
-    const fy = Math.max(0, Math.min(mh - 1, ((y + 0.5) * mh / sh) - 0.5));
-    const x0 = Math.floor(fx), y0 = Math.floor(fy);
-    const x1 = Math.min(mw - 1, x0 + 1), y1 = Math.min(mh - 1, y0 + 1);
-    const tx = fx - x0, ty = fy - y0;
-    const a = values[y0 * mw + x0], b = values[y0 * mw + x1];
-    const c = values[y1 * mw + x0], d = values[y1 * mw + x1];
-    return (a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty;
-  }
-
-  function cleanEdgeColorFringe(pixels, width, height) {
-    // Correct old-background colour spill only on semi-transparent edge pixels.
-    // Opaque face, skin and clothing pixels remain unchanged.
+  function removeBackgroundColorSpill(pixels, width, height) {
+    // Decontaminate only soft matte pixels. Fully opaque face/skin/clothing
+    // pixels remain unchanged, preserving the original facial RGB.
     for (let y = 2; y < height - 2; y++) {
       for (let x = 2; x < width - 2; x++) {
         const i = (y * width + x) * 4;
         const alpha = pixels[i + 3] / 255;
-        if (alpha < 0.28 || alpha > 0.94) continue;
+        if (alpha < 0.16 || alpha > 0.90) continue;
         let r = 0, g = 0, b = 0, count = 0;
-        for (let dy = -2; dy <= 2; dy++) {
-          for (let dx = -2; dx <= 2; dx++) {
-            if (Math.abs(dx) + Math.abs(dy) < 2) continue;
+        for (let dy = -2; dy <= 2; dy += 2) {
+          for (let dx = -2; dx <= 2; dx += 2) {
+            if (!dx && !dy) continue;
             const ni = ((y + dy) * width + x + dx) * 4;
-            if (pixels[ni + 3] <= 10) {
-              r += pixels[ni]; g += pixels[ni + 1]; b += pixels[ni + 2]; count++;
+            if (pixels[ni + 3] <= 8) {
+              r += pixels[ni]; g += pixels[ni + 1]; b += pixels[ni + 2];
+              count++;
             }
           }
         }
         if (count < 2) continue;
         const bgR = r / count, bgG = g / count, bgB = b / count;
-        const inv = 1 / Math.max(0.28, alpha);
-        const strength = Math.min(0.72, (1 - alpha) * 0.82);
+        const inv = 1 / Math.max(0.16, alpha);
+        const strength = Math.min(0.58, (1 - alpha) * 0.72);
         const fgR = Math.max(0, Math.min(255, (pixels[i] - (1 - alpha) * bgR) * inv));
         const fgG = Math.max(0, Math.min(255, (pixels[i + 1] - (1 - alpha) * bgG) * inv));
         const fgB = Math.max(0, Math.min(255, (pixels[i + 2] - (1 - alpha) * bgB) * inv));
@@ -331,103 +303,58 @@
     }
   }
 
-  async function makePersonCutout(sourceCanvas) {
-    const segmenter = await createSegmenter();
-    const results = await new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error("AI tách người mất quá nhiều thời gian. Vui lòng thử lại.")), 45000);
-      segmenter.onResults(result => {
-        clearTimeout(timer);
-        resolve(result);
-      });
-      Promise.resolve(segmenter.send({ image: sourceCanvas })).catch(error => {
-        clearTimeout(timer);
-        reject(error);
-      });
-    });
-    if (!results?.segmentationMask) {
-      throw new Error("AI chưa nhận diện được người. Hãy chụp đủ sáng, tránh để người khác che khuất.");
+  async function makePersonCutout(sourceCanvas, onProgress) {
+    const remover = await createMattingEngine(onProgress);
+    const sourceBitmap = await createImageBitmap(sourceCanvas);
+    let matteBitmap = null;
+    try {
+      matteBitmap = await remover.removeBackground(sourceBitmap);
+    } finally {
+      try { sourceBitmap.close(); } catch (_) {}
     }
+    if (!matteBitmap) throw new Error("Mô hình chưa tạo được mặt nạ tách người. Vui lòng thử lại.");
 
     const width = sourceCanvas.width;
     const height = sourceCanvas.height;
-    const maskCanvas = document.createElement("canvas");
-    maskCanvas.width = width;
-    maskCanvas.height = height;
-    const maskCtx = maskCanvas.getContext("2d", { willReadFrequently: true });
-    maskCtx.filter = "blur(0.55px)";
-    maskCtx.drawImage(results.segmentationMask, 0, 0, width, height);
-    maskCtx.filter = "none";
-    const mask = maskCtx.getImageData(0, 0, width, height).data;
+    const originalCanvas = document.createElement("canvas");
+    originalCanvas.width = width;
+    originalCanvas.height = height;
+    const originalCtx = originalCanvas.getContext("2d", { willReadFrequently: true });
+    originalCtx.drawImage(sourceCanvas, 0, 0);
+    const originalImage = originalCtx.getImageData(0, 0, width, height);
+    const originalPixels = originalImage.data;
 
-    // Optional dedicated 512px hair confidence map improves hairline detail.
-    // The model only changes the matte; it never redraws any RGB/face pixels.
-    let hairValues = null, hairWidth = 0, hairHeight = 0, hairRefined = false;
-    try {
-      const hairTask = await createHairSegmenter();
-      const hairResult = hairTask.segment(sourceCanvas);
-      const masks = hairResult?.confidenceMasks || [];
-      const labels = hairTask.getLabels?.() || [];
-      let hairIndex = labels.findIndex(label => String(label).toLowerCase().includes("hair"));
-      if (hairIndex < 0) hairIndex = 1;
-      const hairMask = masks[hairIndex];
-      if (hairMask) {
-        // Copy mask data before closing MediaPipe's result object; some
-        // runtimes release the WASM-backed view when confidenceMasks are closed.
-        const hairData = hairMask.getAsFloat32Array();
-        hairValues = hairData ? new Float32Array(hairData) : null;
-        hairWidth = hairMask.width;
-        hairHeight = hairMask.height;
-        hairRefined = Boolean(hairValues?.length && hairWidth && hairHeight);
-      }
-      for (const item of masks) { try { item.close(); } catch (_) {} }
-      if (hairResult?.categoryMask) { try { hairResult.categoryMask.close(); } catch (_) {} }
-    } catch (_) {
-      hairValues = null;
-      hairRefined = false;
-    }
+    const matteCanvas = document.createElement("canvas");
+    matteCanvas.width = width;
+    matteCanvas.height = height;
+    const matteCtx = matteCanvas.getContext("2d", { willReadFrequently: true });
+    matteCtx.drawImage(matteBitmap, 0, 0, width, height);
+    try { matteBitmap.close(); } catch (_) {}
+    const mattePixels = matteCtx.getImageData(0, 0, width, height).data;
 
-    const cutout = document.createElement("canvas");
-    cutout.width = width;
-    cutout.height = height;
-    const ctx = cutout.getContext("2d", { willReadFrequently: true });
-    ctx.drawImage(sourceCanvas, 0, 0);
-    const image = ctx.getImageData(0, 0, width, height);
-    const pixels = image.data;
     let minX = width, minY = height, maxX = -1, maxY = -1;
     let opaqueCount = 0;
-
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const i = (y * width + x) * 4;
-        const personProbability = mask[i] / 255;
-        const personT = Math.max(0, Math.min(1, (personProbability - 0.34) / 0.40));
-        const personAlpha = personT * personT * (3 - 2 * personT);
-        let alpha = personAlpha;
-        if (hairValues) {
-          const hairProbability = sampleFloatMask(hairValues, hairWidth, hairHeight, x, y, width, height);
-          const hairT = Math.max(0, Math.min(1, (hairProbability - 0.16) / 0.58));
-          const hairAlpha = hairT * hairT * (3 - 2 * hairT);
-          // HairSegmenter only recovers fine hair pixels; it does not expand
-          // the entire body matte or introduce a broad translucent halo.
-          alpha = Math.max(personAlpha, Math.min(1, hairAlpha * 0.94));
-        }
-        pixels[i + 3] = Math.round(pixels[i + 3] * alpha);
-        if (alpha > 0.075) {
+        let alpha = mattePixels[i + 3];
+        if (alpha < 4) alpha = 0;
+        originalPixels[i + 3] = alpha;
+        if (alpha > 12) {
           if (x < minX) minX = x;
           if (x > maxX) maxX = x;
           if (y < minY) minY = y;
           if (y > maxY) maxY = y;
         }
-        if (alpha > 0.88) opaqueCount++;
+        if (alpha > 224) opaqueCount++;
       }
     }
-
     if (maxX < minX || maxY < minY || opaqueCount < 1500) {
-      throw new Error("AI chưa tách được chủ thể rõ ràng. Hãy chụp đủ sáng, tránh để người khác che khuất.");
+      throw new Error("Mô hình chưa nhận diện được người rõ ràng. Hãy chụp đủ sáng, để tóc và vai không bị che khuất.");
     }
-    cleanEdgeColorFringe(pixels, width, height);
-    ctx.putImageData(image, 0, 0);
 
+    removeBackgroundColorSpill(originalPixels, width, height);
+    originalCtx.putImageData(originalImage, 0, 0);
     const margin = Math.round(Math.max(width, height) * 0.006);
     minX = Math.max(0, minX - margin);
     minY = Math.max(0, minY - margin);
@@ -437,12 +364,14 @@
     const trimmed = document.createElement("canvas");
     trimmed.width = maxX - minX + 1;
     trimmed.height = maxY - minY + 1;
-    trimmed.getContext("2d").drawImage(cutout, minX, minY, trimmed.width, trimmed.height, 0, 0, trimmed.width, trimmed.height);
-
+    trimmed.getContext("2d").drawImage(
+      originalCanvas, minX, minY, trimmed.width, trimmed.height,
+      0, 0, trimmed.width, trimmed.height
+    );
     const aspect = trimmed.height / trimmed.width;
     const touchesBottom = maxY >= height * 0.97;
     const framing = aspect >= 1.88 && touchesBottom ? "full-body" : "portrait";
-    return { canvas: trimmed, touchesBottom, aspect, framing, hairRefined };
+    return { canvas: trimmed, touchesBottom, aspect, framing, matteModel: matteModelName };
   }
 
   function analyzeSubjectLight(subjectCanvas) {
@@ -580,8 +509,12 @@
     let background = null;
     try {
       const sourceCanvas = await imageFileToCanvas(file);
-      setProgress(25, "ĐANG TÁCH NGƯỜI & TÓC", "Đang làm sạch đường viền…", "Kết hợp mặt nạ người với mô hình tóc 512 px; điểm ảnh khuôn mặt vẫn lấy từ ảnh gốc.");
-      const person = await makePersonCutout(sourceCanvas);
+      setProgress(20, "ĐANG NẠP MÔ HÌNH TÁCH ẢNH", "Đang chuẩn bị Longpipe XL…", "Lần đầu tải mô hình khoảng 14,5 MB; ảnh người vẫn ở trên thiết bị. Các lượt sau dùng bộ nhớ đệm.");
+      const person = await makePersonCutout(sourceCanvas, (fraction, modelName) => {
+        const percent = 20 + Math.max(0, Math.min(1, fraction)) * 22;
+        setProgress(percent, "ĐANG TẢI MÔ HÌNH", "Đang nạp " + modelName + "…", "Chỉ tải trọng số mô hình về trình duyệt; không tải ảnh cá nhân lên máy chủ.");
+      });
+      setProgress(44, "ĐANG TÁCH NGƯỜI CHI TIẾT", "Đang tinh chỉnh tóc và mép cơ thể…", "Dùng mô hình alpha matting chuyên cho người; giữ lại điểm ảnh gốc của khuôn mặt.");
       setProgress(48, "ĐANG TẠO PHÔNG NỀN",
         selectedMode === "ai-background" ? "AI đang sáng tạo phong cảnh mới…" : "Đang tải ảnh nền thư viện…",
         selectedMode === "ai-background"
@@ -589,7 +522,7 @@
           : "Đang lấy ảnh phong cảnh cố định đã chọn.");
       const subjectLight = analyzeSubjectLight(person.canvas);
       background = await generateBackground(selectedScene, selectedMode, person.framing, subjectLight);
-      setProgress(78, "ĐANG PHỐI GHÉP", "Đang cân ánh sáng và hoàn thiện ảnh…", "Ảnh người vẫn được giữ từ ảnh gốc; AI chỉ nhận thống kê ánh sáng tổng quát để tạo nền hài hòa hơn.");
+      setProgress(78, "ĐANG PHỐI GHÉP", "Đang hoàn thiện mép ảnh và ánh sáng…", "Giữ màu ảnh gốc, chỉ dùng alpha matting để tách tóc, vai và đường viền cơ thể.");
       const output = await compositeImage(background.bitmap, person);
       clearResult();
       resultBlob = output;
@@ -598,10 +531,10 @@
       const scene = SCENES[selectedScene];
       if (background.source === "flux-ai") {
         el.resultDescription.textContent = "AI đã tạo mới phong cảnh cho lượt này. Người trong ảnh được lấy trực tiếp từ ảnh gốc và ghép trên thiết bị; ảnh người không được gửi lên AI." + (person.framing === "portrait" ? " Ảnh gốc là chân dung/bán thân nên bố cục được thu nhỏ theo kiểu chân dung, không tự tạo thêm phần cơ thể bị khuất." : "");
-        el.resultMeta.textContent = "Nền AI tạo mới · " + scene.title + " · " + (person.hairRefined ? "Tinh chỉnh viền tóc 512 px" : "Tách người tiêu chuẩn") + " · " + (person.framing === "full-body" ? "Toàn thân" : "Chân dung/bán thân") + " · Giữ khuôn mặt gốc";
+        el.resultMeta.textContent = "Nền AI tạo mới · " + scene.title + " · " + (person.matteModel || "Alpha matting trên thiết bị") + " · " + (person.framing === "full-body" ? "Toàn thân" : "Chân dung/bán thân") + " · Giữ khuôn mặt gốc";
       } else {
         el.resultDescription.textContent = "Người trong ảnh được giữ trực tiếp từ ảnh gốc và ghép với ảnh phong cảnh trong thư viện trên thiết bị." + (person.framing === "portrait" ? " Ảnh gốc là chân dung/bán thân nên bố cục được thu nhỏ theo kiểu chân dung, không tự tạo thêm phần cơ thể bị khuất." : "");
-        el.resultMeta.textContent = "Nền thư viện · " + scene.title + " · " + (person.hairRefined ? "Tinh chỉnh viền tóc 512 px" : "Tách người tiêu chuẩn") + " · " + (person.framing === "full-body" ? "Toàn thân" : "Chân dung/bán thân") + " · Giữ khuôn mặt gốc" + (background.attribution ? " · " + background.attribution : "");
+        el.resultMeta.textContent = "Nền thư viện · " + scene.title + " · " + (person.matteModel || "Alpha matting trên thiết bị") + " · " + (person.framing === "full-body" ? "Toàn thân" : "Chân dung/bán thân") + " · Giữ khuôn mặt gốc" + (background.attribution ? " · " + background.attribution : "");
       }
       el.downloadHelp.textContent = "Ảnh JPEG 1600 × 2000 px. Khuôn mặt và trang phục được lấy từ ảnh gốc, không bị AI tạo sinh vẽ lại.";
       setProgress(100, "HOÀN TẤT", "Bức ảnh đã sẵn sàng!", "Có thể tải ảnh về, chụp lại hoặc quay lại chọn một phong cảnh khác để ghép cùng ảnh này.");
@@ -768,9 +701,9 @@
   });
   window.addEventListener("pagehide", () => {
     clearResult();
-    try { hairSegmenterInstance?.close?.(); } catch (_) {}
-    hairSegmenterInstance = null;
-    hairSegmenterPromise = null;
+    try { matteRemoverInstance?.destroy?.(); } catch (_) {}
+    matteRemoverInstance = null;
+    matteRemoverPromise = null;
   });
 
   checkService();
