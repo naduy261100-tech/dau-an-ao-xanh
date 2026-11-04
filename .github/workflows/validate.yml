@@ -26,6 +26,7 @@ jobs:
           node --check src/index.js
           node --check functions/api/health.js
           node --check functions/api/background.js
+          node --check functions/api/ai-edit.js
       - name: Check Wrangler configuration
         run: |
           grep -q 'main = "src/index.js"' wrangler.toml
