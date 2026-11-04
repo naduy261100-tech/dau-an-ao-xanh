@@ -8,7 +8,7 @@ const report = (status, details = "") => {
 async function run() {
   try {
     report("Loading local BiRefNet background remover…");
-    const module = await import("https://cdn.jsdelivr.net/npm/@bg0/browser@0.1.2/+esm");
+    const module = await import("https://cdn.jsdelivr.net/npm/@bg0/browser@0.1.1/+esm");
     if (typeof module.removeBackground !== "function") throw new Error("removeBackground export missing");
     report("Downloading public portrait sample…");
     const response = await fetch("https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1000");
