@@ -6,6 +6,12 @@
     consentCheck: $("consentCheck"),
     agreeButton: $("agreeButton"),
     sceneGrid: $("sceneGrid"),
+    modeOptions: document.querySelectorAll("[data-mode]"),
+    modeDisclaimer: $("modeDisclaimer"),
+    privacyTitle: $("privacyTitle"),
+    privacyMessage: $("privacyMessage"),
+    aiConsentRow: $("aiConsentRow"),
+    aiUploadConsent: $("aiUploadConsent"),
     cameraScreen: $("cameraScreen"),
     cameraStatusTitle: $("cameraStatusTitle"),
     cameraStatusText: $("cameraStatusText"),
@@ -39,6 +45,7 @@
   };
 
   let selectedScene = "rice-gold";
+  let selectedMode = "private";
   let serviceReady = false;
   let consentAccepted = false;
   let processing = false;
@@ -76,12 +83,44 @@
       // The real-photo library keeps capture available even when the free
       // generative model is temporarily busy or not configured.
       serviceReady = true;
-      el.agreeButton.disabled = !el.consentCheck.checked;
+      updateAgreeButton();
     } catch (_) {
       serviceReady = false;
       el.agreeButton.disabled = true;
       showError("Chưa kết nối được dịch vụ. Vui lòng kiểm tra Internet rồi tải lại trang.");
     }
+  }
+
+  function updateAgreeButton() {
+    const generalConsent = Boolean(el.consentCheck.checked);
+    const aiConsent = selectedMode !== "ai" || Boolean(el.aiUploadConsent.checked);
+    el.agreeButton.disabled = !serviceReady || !generalConsent || !aiConsent;
+  }
+
+  function selectMode(mode) {
+    if (mode !== "private" && mode !== "ai") return;
+    if (selectedMode !== mode && mode === "ai") el.aiUploadConsent.checked = false;
+    selectedMode = mode;
+    for (const button of el.modeOptions) {
+      const active = button.dataset.mode === mode;
+      button.classList.toggle("is-selected", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    }
+    const ai = mode === "ai";
+    el.aiConsentRow.hidden = !ai;
+    if (ai) {
+      el.modeDisclaimer.textContent = "Ảnh gốc sẽ được gửi qua Cloudflare AI đến Black Forest Labs để chỉnh sửa. Mô hình có thể thay đổi một số chi tiết; hãy kiểm tra kết quả trước khi tải về.";
+      el.privacyTitle.textContent = "Chế độ AI gửi ảnh lên dịch vụ bên ngoài";
+      el.privacyMessage.textContent = "Ảnh chụp được gửi từ điện thoại tới máy chủ Cloudflare và mô hình FLUX.1 Kontext Pro của Black Forest Labs để tạo ảnh chỉnh sửa. Website không lưu ảnh vào thư viện hoặc cơ sở dữ liệu; việc xử lý dữ liệu tại nhà cung cấp tuân theo chính sách của họ.";
+      el.agreeButton.innerHTML = 'ĐỒNG Ý & GỬI ẢNH TỚI AI <span aria-hidden="true">→</span>';
+    } else {
+      el.modeDisclaimer.textContent = "Chế độ riêng tư xử lý toàn bộ ảnh trên điện thoại; kết quả ghép vẫn có thể chưa hoàn toàn tự nhiên.";
+      el.privacyTitle.textContent = "Ảnh gốc được giữ trên điện thoại";
+      el.privacyMessage.textContent = "Ảnh cá nhân không tải lên máy chủ. Máy chủ chỉ nhận mã phông nền đã chọn.";
+      el.agreeButton.innerHTML = 'ĐỒNG Ý & MỞ CAMERA <span aria-hidden="true">→</span>';
+    }
+    updateAgreeButton();
+    clearError();
   }
 
   function selectScene(id) {
@@ -96,9 +135,12 @@
   }
 
   function openNativeCamera() {
-    if (!consentAccepted) {
+    if (!consentAccepted || !el.consentCheck.checked || (selectedMode === "ai" && !el.aiUploadConsent.checked)) {
       showScreen("consent");
-      showError("Vui lòng xác nhận quyền sử dụng ảnh trước khi mở camera.");
+      showError(selectedMode === "ai"
+        ? "Vui lòng xác nhận cả quyền sử dụng ảnh và việc gửi ảnh lên AI trước khi mở camera."
+        : "Vui lòng xác nhận quyền sử dụng ảnh trước khi mở camera.");
+      updateAgreeButton();
       return;
     }
     clearError();
@@ -414,6 +456,62 @@
     }
   }
 
+  async function processPhotoWithAI(file) {
+    if (processing) return;
+    processing = true;
+    clearError();
+    showScreen("processing");
+    setProgress(8, "ĐANG CHUẨN BỊ ẢNH", "Đang chuẩn bị gửi ảnh tới AI…", "Ảnh được nén trên thiết bị trước khi gửi theo chấp thuận của bạn.");
+    try {
+      const sourceCanvas = await imageFileToCanvas(file);
+      const crop = cropToPortrait(sourceCanvas.width, sourceCanvas.height);
+      const uploadCanvas = document.createElement("canvas");
+      uploadCanvas.width = 1024;
+      uploadCanvas.height = 1280;
+      const uploadCtx = uploadCanvas.getContext("2d");
+      uploadCtx.drawImage(sourceCanvas, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, uploadCanvas.width, uploadCanvas.height);
+      const dataUrl = uploadCanvas.toDataURL("image/jpeg", 0.88);
+      const imageBase64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
+      if (!imageBase64 || imageBase64.length > 7_500_000) {
+        throw new Error("Ảnh quá lớn để gửi tới AI. Vui lòng chụp lại với độ phân giải thấp hơn.");
+      }
+
+      setProgress(32, "ĐANG GỬI ẢNH ĐÃ ĐƯỢC CHẤP THUẬN", "AI đang tiếp nhận ảnh…", "Ảnh gốc được gửi tới Cloudflare AI và mô hình chỉnh sửa của Black Forest Labs.");
+      const response = await fetch("/api/ai-edit", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({ scene: selectedScene, imageBase64, mimeType: "image/jpeg", consent: true })
+      });
+      if (!response.ok) {
+        let message = "AI chưa chỉnh sửa được ảnh. Vui lòng thử lại hoặc chuyển sang chế độ riêng tư.";
+        try {
+          const data = await response.json();
+          if (typeof data.message === "string") message = data.message;
+        } catch (_) {}
+        throw new Error(message);
+      }
+      setProgress(86, "ĐANG NHẬN ẢNH AI", "AI đã xử lý xong…", "Đang chuẩn bị ảnh kết quả để bạn kiểm tra.");
+      const output = await response.blob();
+      if (!output.type.startsWith("image/")) throw new Error("Mô hình AI không trả về ảnh hợp lệ.");
+      clearResult();
+      resultBlob = output;
+      resultUrl = URL.createObjectURL(output);
+      el.resultImage.src = resultUrl;
+      el.resultDescription.textContent = "AI đã chỉnh sửa trực tiếp ảnh gốc và tạo lại bối cảnh theo lựa chọn. Hãy kiểm tra kỹ khuôn mặt, trang phục và các chi tiết trước khi tải ảnh.";
+      el.resultMeta.textContent = "Chế độ AI · FLUX.1 Kontext Pro · Phông nền: " + SCENES[selectedScene].title;
+      setProgress(100, "HOÀN TẤT", "Ảnh AI đã sẵn sàng!", "Bạn có thể tải ảnh về hoặc chụp lại. Mỗi lượt tạo ảnh có chi phí theo giá hiển thị trước khi chụp.");
+      await delay(350);
+      showScreen("result");
+    } catch (error) {
+      showScreen("consent");
+      showError(error instanceof Error ? error.message : "Có lỗi khi gửi ảnh tới AI. Vui lòng thử lại.");
+      updateAgreeButton();
+    } finally {
+      processing = false;
+    }
+  }
+
   function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
@@ -466,19 +564,32 @@
     }
   }
 
+  for (const button of el.modeOptions) {
+    button.addEventListener("click", () => selectMode(button.dataset.mode));
+  }
+
   el.sceneGrid.addEventListener("click", event => {
     const button = event.target.closest("[data-scene]");
     if (button) selectScene(button.dataset.scene);
   });
 
   el.consentCheck.addEventListener("change", () => {
-    el.agreeButton.disabled = !el.consentCheck.checked || !serviceReady;
+    updateAgreeButton();
+    clearError();
+  });
+
+  el.aiUploadConsent.addEventListener("change", () => {
+    updateAgreeButton();
     clearError();
   });
 
   el.agreeButton.addEventListener("click", () => {
     if (!el.consentCheck.checked) {
       showError("Vui lòng xác nhận quyền sử dụng ảnh trước khi mở camera.");
+      return;
+    }
+    if (selectedMode === "ai" && !el.aiUploadConsent.checked) {
+      showError("Vui lòng đọc và chấp thuận riêng việc gửi ảnh tới dịch vụ AI.");
       return;
     }
     if (!serviceReady) {
@@ -494,7 +605,7 @@
     showScreen("consent");
     consentAccepted = false;
     el.consentCheck.checked = false;
-    el.agreeButton.disabled = !serviceReady;
+    updateAgreeButton();
     clearError();
   });
 
@@ -506,7 +617,8 @@
       showError("Tệp bạn chọn không phải là ảnh. Vui lòng chụp lại.");
       return;
     }
-    await processPhoto(file);
+    if (selectedMode === "ai") await processPhotoWithAI(file);
+    else await processPhoto(file);
     el.nativeCameraInput.value = "";
   });
 
