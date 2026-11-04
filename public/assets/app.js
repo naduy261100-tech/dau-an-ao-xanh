@@ -115,15 +115,15 @@
     el.aiConsentRow.hidden = !ai;
     if (ai) {
       el.privacyReminder.textContent = "Ảnh đang được gửi tới Cloudflare AI để chỉnh sửa theo chấp thuận của bạn. Chế độ này dùng hạn mức miễn phí hằng ngày.";
-      el.modeDisclaimer.textContent = "Ảnh gốc được gửi tới Cloudflare AI để chỉnh sửa bằng mô hình FLUX.2 Klein 4B. Miễn phí, dự kiến khoảng 50 lượt/ngày ở kích thước hiện tại. Hạn mức 10.000 neurons/ngày dùng chung với các tác vụ AI khác; khi hết hạn mức, yêu cầu sẽ dừng và không tự chuyển sang dịch vụ tính phí.";
-      el.privacyTitle.textContent = "AI chỉnh ảnh qua Cloudflare (hạn mức miễn phí)";
-      el.privacyMessage.textContent = "Ảnh chụp được gửi tới máy chủ Cloudflare và mô hình FLUX.2 Klein 4B của Black Forest Labs để ghép chỉnh sửa với ảnh phong cảnh đã chọn. Mô hình được Cloudflare đánh dấu Zero Data Retention; ứng dụng không ghi ảnh vào thư viện hoặc cơ sở dữ liệu.";
+      el.modeDisclaimer.textContent = "Chế độ AI sáng tạo gửi ảnh lên Cloudflare và vẽ lại toàn cảnh. Dù đã có hướng dẫn giữ nguyên người, mô hình vẫn có thể thay đổi khuôn mặt, tóc, trang phục hoặc chi tiết cơ thể. Không chọn chế độ này nếu cần giữ nguyên diện mạo.";
+      el.privacyTitle.textContent = "Ảnh được gửi tới Cloudflare AI";
+      el.privacyMessage.textContent = "FLUX.2 Klein 4B sẽ tái tạo ảnh người và bối cảnh. Khuôn mặt hoặc trang phục có thể khác ảnh gốc. Chỉ tiếp tục khi bạn chấp nhận khả năng thay đổi đó.";
       el.agreeButton.innerHTML = 'MỞ CAMERA & DÙNG AI MIỄN PHÍ <span aria-hidden="true">→</span>';
     } else {
       el.privacyReminder.textContent = "Ảnh gốc không rời khỏi thiết bị của bạn.";
-      el.modeDisclaimer.textContent = "Chế độ riêng tư xử lý toàn bộ ảnh trên điện thoại; kết quả ghép vẫn có thể chưa hoàn toàn tự nhiên.";
-      el.privacyTitle.textContent = "Ảnh gốc được giữ trên điện thoại";
-      el.privacyMessage.textContent = "Ảnh cá nhân không tải lên máy chủ. Máy chủ chỉ nhận mã phông nền đã chọn.";
+      el.modeDisclaimer.textContent = "Chế độ giữ nguyên khuôn mặt xử lý ảnh ngay trên điện thoại. Người trong ảnh được lấy từ ảnh gốc, không bị mô hình tạo sinh vẽ lại; kết quả ghép có thể chưa tự nhiên tuyệt đối.";
+      el.privacyTitle.textContent = "Giữ khuôn mặt gốc · ảnh không rời thiết bị";
+      el.privacyMessage.textContent = "Tách nền và ghép phong cảnh ngay trên điện thoại. Máy chủ chỉ nhận mã nền đã chọn; không nhận ảnh cá nhân.";
       el.agreeButton.innerHTML = 'ĐỒNG Ý & MỞ CAMERA <span aria-hidden="true">→</span>';
     }
     updateAgreeButton();
@@ -174,7 +174,7 @@
   }
 
   async function imageFileToCanvas(file) {
-    const maxSide = 2048;
+    const maxSide = 2560;
     let source = null;
     let sourceWidth = 0;
     let sourceHeight = 0;
@@ -364,12 +364,16 @@
   }
 
   async function compositeImage(background, person) {
-    const width = 1080;
-    const height = 1350;
+    // Export at a higher portrait resolution. The source subject is retained
+    // from the original capture; this does not generatively redraw the face.
+    const width = 1600;
+    const height = 2000;
     const output = document.createElement("canvas");
     output.width = width;
     output.height = height;
     const ctx = output.getContext("2d");
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
 
     drawCover(ctx, background, 0, 0, width, height);
 
@@ -394,35 +398,17 @@
     ctx.fill();
     ctx.restore();
 
-    // Draw the subject only once with a restrained contact shadow.
+    // Draw the original cutout without brightness, contrast, saturation or
+    // beauty filters. This keeps facial features and skin colour from the
+    // source photo instead of altering them to match an AI-generated face.
     ctx.save();
-    ctx.shadowColor = "rgba(10,24,15,0.18)";
-    ctx.shadowBlur = 10;
-    ctx.shadowOffsetY = 4;
-    const subjectBrightness = sampleLuminanceFromCanvas(subject);
-    const adjust = Math.max(0.93, Math.min(1.06, 1 + (0.48 - groundBrightness) * 0.12));
-    ctx.filter = "brightness(" + adjust.toFixed(3) + ") contrast(1.015) saturate(0.97)";
+    ctx.filter = "none";
     ctx.drawImage(subject, x, y, subjectWidth, subjectHeight);
     ctx.restore();
 
     return new Promise((resolve, reject) => {
-      output.toBlob(blob => blob ? resolve(blob) : reject(new Error("Không xuất được ảnh hoàn chỉnh.")), "image/jpeg", 0.95);
+      output.toBlob(blob => blob ? resolve(blob) : reject(new Error("Không xuất được ảnh hoàn chỉnh.")), "image/jpeg", 0.98);
     });
-  }
-
-  function sampleLuminanceFromCanvas(canvas) {
-    const sample = document.createElement("canvas");
-    sample.width = 24;
-    sample.height = 24;
-    const ctx = sample.getContext("2d", { willReadFrequently: true });
-    ctx.drawImage(canvas, 0, 0, 24, 24);
-    const d = ctx.getImageData(0, 0, 24, 24).data;
-    let sum = 0;
-    for (let i = 0; i < d.length; i += 4) {
-      const a = d[i + 3] / 255;
-      if (a > 0.7) sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
-    }
-    return sum / (24 * 24) / 255;
   }
 
   async function processPhoto(file) {
@@ -430,27 +416,23 @@
     processing = true;
     clearError();
     showScreen("processing");
-    setProgress(10, "ĐANG ĐỌC ẢNH", "AI đang xử lý hình ảnh…", "Đang đọc ảnh chụp và chuẩn bị nhận diện chủ thể.");
+    setProgress(10, "ĐANG ĐỌC ẢNH", "Đang giữ nguyên ảnh chụp…", "Ảnh gốc được xử lý ở độ phân giải cao ngay trên điện thoại.");
     let background = null;
     try {
       const sourceCanvas = await imageFileToCanvas(file);
-      setProgress(28, "ĐANG TÁCH NGƯỜI", "AI đang tách chủ thể…", "Mô hình nhận diện người chạy ngay trên thiết bị của bạn.");
+      setProgress(28, "ĐANG TÁCH NỀN", "Đang bảo toàn khuôn mặt gốc…", "AI chỉ tạo mặt nạ tách người; không vẽ lại hoặc chỉnh sửa nét mặt.");
       const person = await makePersonCutout(sourceCanvas);
       setProgress(55, "ĐANG CHUẨN BỊ PHÔNG NỀN", "Chủ thể đã được tách", "Đang tải bối cảnh bạn đã chọn và căn chỉnh bố cục.");
       background = await generateBackground(selectedScene);
-      setProgress(78, "ĐANG PHỐI GHÉP", "Đang hòa phối chủ thể và phong cảnh…", "Hệ thống căn chỉnh kích thước, bóng tiếp xúc và sắc độ tổng thể.");
+      setProgress(78, "ĐANG PHỐI GHÉP", "Đang xuất ảnh chất lượng cao…", "Giữ nguyên màu sắc và chi tiết người chụp; xuất ảnh dọc 1600 × 2000 px.");
       const output = await compositeImage(background.bitmap, person);
       clearResult();
       resultBlob = output;
       resultUrl = URL.createObjectURL(output);
       el.resultImage.src = resultUrl;
       const scene = SCENES[selectedScene];
-      if (background.source === "flux-ai") {
-        el.resultDescription.textContent = "AI đã tách chủ thể và tạo phông nền theo bối cảnh bạn chọn.";
-      } else {
-        el.resultDescription.textContent = "AI đã tách chủ thể và phối ghép với ảnh phong cảnh chụp thật bạn đã chọn.";
-      }
-      el.resultMeta.textContent = "Phông nền: " + scene.title + (background.attribution ? " · Ảnh: " + background.attribution : "");
+      el.resultDescription.textContent = "Người trong ảnh được lấy trực tiếp từ ảnh gốc; ứng dụng chỉ tách nền và ghép phong cảnh, không dùng AI tạo sinh để vẽ lại khuôn mặt.";
+      el.resultMeta.textContent = "Phông nền: " + scene.title + " · Ảnh xuất: 1600 × 2000 px · Giữ nguyên khuôn mặt" + (background.attribution ? " · Ảnh nền: " + background.attribution : "");
       setProgress(100, "HOÀN TẤT", "Bức ảnh đã sẵn sàng!", "Bạn có thể tải ảnh về hoặc chụp lại bằng camera điện thoại.");
       await delay(300);
       showScreen("result");
