@@ -1,12 +1,10 @@
 name: Check AI-created and library backgrounds
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   smoke:
-    if: startsWith(github.event.head_commit.message, '[smoke-ai]')
     runs-on: ubuntu-latest
     steps:
       - name: Wait for Cloudflare production deployment
