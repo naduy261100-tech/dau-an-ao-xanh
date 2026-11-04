@@ -165,12 +165,15 @@ export async function onRequestPost({ request, env }) {
     "Clear spring daylight with subtle directional sunlight and true-to-life color."
   ];
   const lighting = lightingStyles[seed % lightingStyles.length];
+  const framing = body?.framing === "portrait" ? "portrait" : "full-body";
+  const compositionPrompt = framing === "portrait"
+    ? "Compose as a premium environmental travel portrait background for a close-up or waist-up subject. Keep scenic mountains, village details and natural depth behind the center of frame. The subject will have no visible feet, so do not invent a standing person or a forced empty platform. Use a natural eye-level camera perspective and leave uncluttered visual space behind the face."
+    : "CRITICAL COMPOSITION: the lower 30 percent must contain a broad, continuous, clearly visible, dry, level standing surface matching the scene (path, paved lane, stone courtyard, bridge deck or dry viewing platform). The surface must extend to the bottom edge and have enough open area for one full-length person to be composited later. Keep the horizon and main scenery in the upper half. Leave an uncluttered central foreground standing area. Show realistic ground texture and a natural light direction. No steep aerial or drone viewpoint.";
   const prompt = [
     selected.prompt,
     "Create a completely new original landscape photograph for this request, not a copy of a stock photo.",
     "Premium high-detail professional real-camera travel photography, crisp natural textures and fine detail, vertical portrait composition, full-frame camera, natural 35mm lens, camera at a standing person's eye level, believable human-scale perspective, realistic dynamic range, clean sharp focus, physically plausible natural light.",
-    "CRITICAL COMPOSITION: the lower 30 percent must contain a broad, continuous, clearly visible, dry, level standing surface matching the scene (path, paved lane, stone courtyard, bridge deck or dry viewing platform). The surface must extend to the bottom edge and have enough open area for one full-length person to be composited later.",
-    "Keep the horizon and main scenery in the upper half. Leave an uncluttered central foreground standing area. Show realistic ground texture and a natural light direction. No steep aerial or drone viewpoint.",
+    compositionPrompt,
     lighting,
     "Do not include any people, human silhouettes, faces, statues, mannequins, animals, signs, letters, captions, logos, borders or watermarks. Water is background scenery only and must never occupy the standing area.",
     "The result must look like a genuine high-quality travel photograph, not CGI, painting, collage or fantasy art."

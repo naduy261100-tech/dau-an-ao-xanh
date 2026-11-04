@@ -60,6 +60,8 @@
   let consentAccepted = false;
   let processing = false;
   let segmenterPromise = null;
+  let hairSegmenterPromise = null;
+  let hairSegmenterInstance = null;
   let resultBlob = null;
   let resultUrl = null;
   let downloadBusy = false;
@@ -249,6 +251,86 @@
     }
   }
 
+
+  async function createHairSegmenter() {
+    if (hairSegmenterPromise) return hairSegmenterPromise;
+    hairSegmenterPromise = (async () => {
+      const visionModule = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/vision_bundle.mjs");
+      const vision = await visionModule.FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.0/wasm"
+      );
+      const modelAssetPath = "https://storage.googleapis.com/mediapipe-models/image_segmenter/hair_segmenter/float32/1/hair_segmenter.tflite";
+      let task;
+      try {
+        task = await visionModule.ImageSegmenter.createFromOptions(vision, {
+          baseOptions: { modelAssetPath, delegate: "GPU" },
+          runningMode: "IMAGE",
+          outputCategoryMask: false,
+          outputConfidenceMasks: true
+        });
+      } catch (_) {
+        task = await visionModule.ImageSegmenter.createFromOptions(vision, {
+          baseOptions: { modelAssetPath, delegate: "CPU" },
+          runningMode: "IMAGE",
+          outputCategoryMask: false,
+          outputConfidenceMasks: true
+        });
+      }
+      hairSegmenterInstance = task;
+      return task;
+    })();
+    try {
+      return await hairSegmenterPromise;
+    } catch (error) {
+      hairSegmenterPromise = null;
+      hairSegmenterInstance = null;
+      throw error;
+    }
+  }
+
+  function sampleFloatMask(values, mw, mh, x, y, sw, sh) {
+    const fx = Math.max(0, Math.min(mw - 1, ((x + 0.5) * mw / sw) - 0.5));
+    const fy = Math.max(0, Math.min(mh - 1, ((y + 0.5) * mh / sh) - 0.5));
+    const x0 = Math.floor(fx), y0 = Math.floor(fy);
+    const x1 = Math.min(mw - 1, x0 + 1), y1 = Math.min(mh - 1, y0 + 1);
+    const tx = fx - x0, ty = fy - y0;
+    const a = values[y0 * mw + x0], b = values[y0 * mw + x1];
+    const c = values[y1 * mw + x0], d = values[y1 * mw + x1];
+    return (a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty;
+  }
+
+  function cleanEdgeColorFringe(pixels, width, height) {
+    // Correct old-background colour spill only on semi-transparent edge pixels.
+    // Opaque face, skin and clothing pixels remain unchanged.
+    for (let y = 2; y < height - 2; y++) {
+      for (let x = 2; x < width - 2; x++) {
+        const i = (y * width + x) * 4;
+        const alpha = pixels[i + 3] / 255;
+        if (alpha < 0.28 || alpha > 0.94) continue;
+        let r = 0, g = 0, b = 0, count = 0;
+        for (let dy = -2; dy <= 2; dy++) {
+          for (let dx = -2; dx <= 2; dx++) {
+            if (Math.abs(dx) + Math.abs(dy) < 2) continue;
+            const ni = ((y + dy) * width + x + dx) * 4;
+            if (pixels[ni + 3] <= 10) {
+              r += pixels[ni]; g += pixels[ni + 1]; b += pixels[ni + 2]; count++;
+            }
+          }
+        }
+        if (count < 2) continue;
+        const bgR = r / count, bgG = g / count, bgB = b / count;
+        const inv = 1 / Math.max(0.28, alpha);
+        const strength = Math.min(0.72, (1 - alpha) * 0.82);
+        const fgR = Math.max(0, Math.min(255, (pixels[i] - (1 - alpha) * bgR) * inv));
+        const fgG = Math.max(0, Math.min(255, (pixels[i + 1] - (1 - alpha) * bgG) * inv));
+        const fgB = Math.max(0, Math.min(255, (pixels[i + 2] - (1 - alpha) * bgB) * inv));
+        pixels[i] = Math.round(pixels[i] + (fgR - pixels[i]) * strength);
+        pixels[i + 1] = Math.round(pixels[i + 1] + (fgG - pixels[i + 1]) * strength);
+        pixels[i + 2] = Math.round(pixels[i + 2] + (fgB - pixels[i + 2]) * strength);
+      }
+    }
+  }
+
   async function makePersonCutout(sourceCanvas) {
     const segmenter = await createSegmenter();
     const results = await new Promise((resolve, reject) => {
@@ -272,10 +354,34 @@
     maskCanvas.width = width;
     maskCanvas.height = height;
     const maskCtx = maskCanvas.getContext("2d", { willReadFrequently: true });
-    maskCtx.filter = "blur(1px)";
+    maskCtx.filter = "blur(1.35px)";
     maskCtx.drawImage(results.segmentationMask, 0, 0, width, height);
     maskCtx.filter = "none";
     const mask = maskCtx.getImageData(0, 0, width, height).data;
+
+    // Optional dedicated 512px hair confidence map improves hairline detail.
+    // The model only changes the matte; it never redraws any RGB/face pixels.
+    let hairValues = null, hairWidth = 0, hairHeight = 0, hairRefined = false;
+    try {
+      const hairTask = await createHairSegmenter();
+      const hairResult = hairTask.segment(sourceCanvas);
+      const masks = hairResult?.confidenceMasks || [];
+      const labels = hairTask.getLabels?.() || [];
+      let hairIndex = labels.findIndex(label => String(label).toLowerCase().includes("hair"));
+      if (hairIndex < 0) hairIndex = 1;
+      const hairMask = masks[hairIndex];
+      if (hairMask) {
+        hairValues = hairMask.getAsFloat32Array();
+        hairWidth = hairMask.width;
+        hairHeight = hairMask.height;
+        hairRefined = Boolean(hairValues?.length && hairWidth && hairHeight);
+      }
+      for (const item of masks) { try { item.close(); } catch (_) {} }
+      if (hairResult?.categoryMask) { try { hairResult.categoryMask.close(); } catch (_) {} }
+    } catch (_) {
+      hairValues = null;
+      hairRefined = false;
+    }
 
     const cutout = document.createElement("canvas");
     cutout.width = width;
@@ -290,11 +396,15 @@
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const i = (y * width + x) * 4;
-        const probability = mask[i] / 255;
-        const t = Math.max(0, Math.min(1, (probability - 0.10) / 0.78));
+        let probability = mask[i] / 255;
+        if (hairValues) {
+          const hairProbability = sampleFloatMask(hairValues, hairWidth, hairHeight, x, y, width, height);
+          probability = Math.max(probability, Math.min(1, hairProbability * 0.96));
+        }
+        const t = Math.max(0, Math.min(1, (probability - 0.075) / 0.82));
         const alpha = t * t * (3 - 2 * t);
         pixels[i + 3] = Math.round(pixels[i + 3] * alpha);
-        if (alpha > 0.04) {
+        if (alpha > 0.035) {
           if (x < minX) minX = x;
           if (x > maxX) maxX = x;
           if (y < minY) minY = y;
@@ -305,8 +415,9 @@
     }
 
     if (maxX < minX || maxY < minY || opaqueCount < 1500) {
-      throw new Error("AI chưa tách được chủ thể rõ ràng. Hãy đứng cách nền một khoảng và chụp đủ sáng.");
+      throw new Error("AI chưa tách được chủ thể rõ ràng. Hãy chụp đủ sáng, tránh để người khác che khuất.");
     }
+    cleanEdgeColorFringe(pixels, width, height);
     ctx.putImageData(image, 0, 0);
 
     const margin = Math.round(Math.max(width, height) * 0.018);
@@ -320,20 +431,19 @@
     trimmed.height = maxY - minY + 1;
     trimmed.getContext("2d").drawImage(cutout, minX, minY, trimmed.width, trimmed.height, 0, 0, trimmed.width, trimmed.height);
 
-    return {
-      canvas: trimmed,
-      touchesBottom: maxY >= height * 0.97,
-      aspect: trimmed.height / trimmed.width
-    };
+    const aspect = trimmed.height / trimmed.width;
+    const touchesBottom = maxY >= height * 0.97;
+    const framing = aspect >= 1.88 && touchesBottom ? "full-body" : "portrait";
+    return { canvas: trimmed, touchesBottom, aspect, framing, hairRefined };
   }
 
-  async function generateBackground(scene, mode) {
+  async function generateBackground(scene, mode, framing) {
     const seed = Math.floor(Math.random() * 2147483646) + 1;
     const response = await fetch("/api/background", {
       method: "POST",
       headers: { "content-type": "application/json" },
       cache: "no-store",
-      body: JSON.stringify({ scene, mode, seed })
+      body: JSON.stringify({ scene, mode, seed, framing })
     });
     if (!response.ok) {
       let message = "Chưa tải được phông nền. Vui lòng thử lại.";
@@ -390,25 +500,35 @@
     drawCover(ctx, background, 0, 0, width, height);
 
     const subject = person.canvas;
-    const fit = Math.min((width * 0.78) / subject.width, (height * 0.84) / subject.height);
+    const fullBody = person.framing === "full-body";
+    const fit = Math.min((width * (fullBody ? 0.76 : 0.60)) / subject.width, (height * (fullBody ? 0.82 : 0.68)) / subject.height);
     const subjectWidth = subject.width * fit;
     const subjectHeight = subject.height * fit;
     const x = (width - subjectWidth) / 2;
     const bottomMargin = person.touchesBottom ? 4 : 24;
-    const y = height - subjectHeight - bottomMargin;
+    const y = fullBody ? height - subjectHeight - bottomMargin : Math.round((height - subjectHeight) * 0.36);
     const footY = Math.min(height - 8, y + subjectHeight * 0.985);
 
     // Contact shadow is deliberately subtle. Avoid outlining the whole cutout,
     // which made the subject look like a sticker on the earlier version.
-    ctx.save();
-    const groundBrightness = sampleLuminance(ctx, width * 0.3, height * 0.84, width * 0.4, height * 0.12);
-    const shadowAlpha = Math.max(0.12, Math.min(0.27, 0.31 - groundBrightness * 0.16));
-    ctx.filter = "blur(18px)";
-    ctx.fillStyle = "rgba(12,22,14," + shadowAlpha.toFixed(3) + ")";
-    ctx.beginPath();
-    ctx.ellipse(width / 2 + subjectWidth * 0.025, footY, Math.max(45, subjectWidth * 0.24), Math.max(10, subjectWidth * 0.025), 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+    if (fullBody) {
+      ctx.save();
+      const groundBrightness = sampleLuminance(ctx, width * 0.3, height * 0.84, width * 0.4, height * 0.12);
+      const shadowAlpha = Math.max(0.12, Math.min(0.24, 0.27 - groundBrightness * 0.14));
+      ctx.filter = "blur(18px)";
+      ctx.fillStyle = "rgba(12,22,14," + shadowAlpha.toFixed(3) + ")";
+      ctx.beginPath();
+      ctx.ellipse(width / 2 + subjectWidth * 0.025, footY, Math.max(45, subjectWidth * 0.22), Math.max(10, subjectWidth * 0.022), 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.shadowColor = "rgba(12,22,14,0.13)";
+      ctx.shadowBlur = 14;
+      ctx.shadowOffsetY = 5;
+      ctx.drawImage(subject, x, y, subjectWidth, subjectHeight);
+      ctx.restore();
+    }
 
     // Draw the original cutout without brightness, contrast, saturation or
     // beauty filters. This keeps facial features and skin colour from the
@@ -434,14 +554,14 @@
     let background = null;
     try {
       const sourceCanvas = await imageFileToCanvas(file);
-      setProgress(25, "ĐANG TÁCH NGƯỜI", "Đang bảo toàn khuôn mặt…", "Mô hình chỉ tạo mặt nạ tách nền; không tái tạo hoặc vẽ lại khuôn mặt.");
+      setProgress(25, "ĐANG TÁCH NGƯỜI & TÓC", "Đang làm sạch đường viền…", "Kết hợp mặt nạ người với mô hình tóc 512 px; điểm ảnh khuôn mặt vẫn lấy từ ảnh gốc.");
       const person = await makePersonCutout(sourceCanvas);
       setProgress(48, "ĐANG TẠO PHÔNG NỀN",
         selectedMode === "ai-background" ? "AI đang sáng tạo phong cảnh mới…" : "Đang tải ảnh nền thư viện…",
         selectedMode === "ai-background"
           ? "AI tạo một cảnh mới theo chủ đề bạn đã chọn. Ảnh người vẫn ở trên điện thoại."
           : "Đang lấy ảnh phong cảnh cố định đã chọn.");
-      background = await generateBackground(selectedScene, selectedMode);
+      background = await generateBackground(selectedScene, selectedMode, person.framing);
       setProgress(78, "ĐANG PHỐI GHÉP", "Đang hoàn thiện ảnh chất lượng cao…", "Giữ nguyên dữ liệu khuôn mặt từ ảnh chụp gốc, ghép người lên nền vừa tạo.");
       const output = await compositeImage(background.bitmap, person);
       clearResult();
@@ -450,11 +570,11 @@
       el.resultImage.src = resultUrl;
       const scene = SCENES[selectedScene];
       if (background.source === "flux-ai") {
-        el.resultDescription.textContent = "AI đã tạo mới phong cảnh cho lượt này. Người trong ảnh được lấy trực tiếp từ ảnh gốc và ghép trên thiết bị; ảnh người không được gửi lên AI.";
-        el.resultMeta.textContent = "Nền AI tạo mới · " + scene.title + " · FLUX.1 Schnell · Ảnh xuất 1600 × 2000 px · Giữ khuôn mặt gốc";
+        el.resultDescription.textContent = "AI đã tạo mới phong cảnh cho lượt này. Người trong ảnh được lấy trực tiếp từ ảnh gốc và ghép trên thiết bị; ảnh người không được gửi lên AI." + (person.framing === "portrait" ? " Ảnh gốc là chân dung/bán thân nên bố cục được thu nhỏ theo kiểu chân dung, không tự tạo thêm phần cơ thể bị khuất." : "");
+        el.resultMeta.textContent = "Nền AI tạo mới · " + scene.title + " · " + (person.hairRefined ? "Tinh chỉnh viền tóc 512 px" : "Tách người tiêu chuẩn") + " · " + (person.framing === "full-body" ? "Toàn thân" : "Chân dung/bán thân") + " · Giữ khuôn mặt gốc";
       } else {
-        el.resultDescription.textContent = "Người trong ảnh được giữ trực tiếp từ ảnh gốc và ghép với ảnh phong cảnh trong thư viện trên thiết bị.";
-        el.resultMeta.textContent = "Nền thư viện · " + scene.title + " · Ảnh xuất 1600 × 2000 px · Giữ khuôn mặt gốc" + (background.attribution ? " · " + background.attribution : "");
+        el.resultDescription.textContent = "Người trong ảnh được giữ trực tiếp từ ảnh gốc và ghép với ảnh phong cảnh trong thư viện trên thiết bị." + (person.framing === "portrait" ? " Ảnh gốc là chân dung/bán thân nên bố cục được thu nhỏ theo kiểu chân dung, không tự tạo thêm phần cơ thể bị khuất." : "");
+        el.resultMeta.textContent = "Nền thư viện · " + scene.title + " · " + (person.hairRefined ? "Tinh chỉnh viền tóc 512 px" : "Tách người tiêu chuẩn") + " · " + (person.framing === "full-body" ? "Toàn thân" : "Chân dung/bán thân") + " · Giữ khuôn mặt gốc" + (background.attribution ? " · " + background.attribution : "");
       }
       el.downloadHelp.textContent = "Ảnh JPEG 1600 × 2000 px. Khuôn mặt và trang phục được lấy từ ảnh gốc, không bị AI tạo sinh vẽ lại.";
       setProgress(100, "HOÀN TẤT", "Bức ảnh đã sẵn sàng!", "Có thể tải ảnh về, chụp lại hoặc quay lại chọn một phong cảnh khác để ghép cùng ảnh này.");
@@ -619,7 +739,12 @@
     clearResult();
     openNativeCamera();
   });
-  window.addEventListener("pagehide", clearResult);
+  window.addEventListener("pagehide", () => {
+    clearResult();
+    try { hairSegmenterInstance?.close?.(); } catch (_) {}
+    hairSegmenterInstance = null;
+    hairSegmenterPromise = null;
+  });
 
   checkService();
 })();
