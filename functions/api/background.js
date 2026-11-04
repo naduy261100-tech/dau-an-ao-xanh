@@ -157,14 +157,23 @@ export async function onRequestPost({ request, env }) {
   const seed = Number.isSafeInteger(parsedSeed) && parsedSeed > 0
     ? parsedSeed
     : Math.floor(Math.random() * 2147483646) + 1;
-  const lightingStyles = [
-    "Soft clear morning light with gentle long shadows and clean atmospheric depth.",
-    "Warm late-afternoon side light, natural golden highlights without an orange color cast.",
-    "Bright overcast daylight, soft realistic shadows and balanced natural colors.",
-    "Fresh early-sunrise light after a light mist, realistic exposure and restrained color.",
-    "Clear spring daylight with subtle directional sunlight and true-to-life color."
-  ];
-  const lighting = lightingStyles[seed % lightingStyles.length];
+  const lightBrightness = Number.isFinite(Number(body?.light?.brightness))
+    ? Math.max(0.12, Math.min(0.92, Number(body.light.brightness)))
+    : 0.52;
+  const lightWarmth = Number.isFinite(Number(body?.light?.warmth))
+    ? Math.max(-0.25, Math.min(0.25, Number(body.light.warmth)))
+    : 0;
+  const exposureMatch = lightBrightness > 0.68
+    ? "The source subject is brightly exposed; keep the background open and bright with soft highlight roll-off, never dark or dramatic."
+    : lightBrightness < 0.34
+      ? "The source subject is in softer/lower light; use gentle open shade and moderate background exposure, avoid harsh direct sunlight."
+      : "The source subject has balanced midtone exposure; use even natural daylight and realistic midtone contrast.";
+  const whiteBalanceMatch = lightWarmth > 0.055
+    ? "Use a subtly warm-neutral daylight white balance compatible with warm skin and clothing; do not turn the entire scene orange."
+    : lightWarmth < -0.045
+      ? "Use a slightly cool-neutral daylight white balance compatible with a cool-lit subject; keep skin-friendly greens and neutral highlights."
+      : "Use neutral daylight white balance with restrained true-to-life greens and whites.";
+  const lighting = "Use soft broad natural daylight, plausible shadow direction and realistic exposure. " + exposureMatch + " " + whiteBalanceMatch;
   const framing = body?.framing === "portrait" ? "portrait" : "full-body";
   const compositionPrompt = framing === "portrait"
     ? "Compose as a premium environmental travel portrait background for a close-up or waist-up subject. Keep scenic mountains, village details and natural depth behind the center of frame. The subject will have no visible feet, so do not invent a standing person or a forced empty platform. Use a natural eye-level camera perspective and leave uncluttered visual space behind the face."
@@ -175,6 +184,7 @@ export async function onRequestPost({ request, env }) {
     "Premium high-detail professional real-camera travel photography, crisp natural textures and fine detail, vertical portrait composition, full-frame camera, natural 35mm lens, camera at a standing person's eye level, believable human-scale perspective, realistic dynamic range, clean sharp focus, physically plausible natural light.",
     compositionPrompt,
     lighting,
+    "Keep greens and other colors naturally saturated, with realistic highlight roll-off, restrained local contrast and camera-like dynamic range; avoid excessive HDR, neon colors or artificial sharpness.",
     "Do not include any people, human silhouettes, faces, statues, mannequins, animals, signs, letters, captions, logos, borders or watermarks. Water is background scenery only and must never occupy the standing area.",
     "Photographic truth is mandatory: it must look like an unretouched real travel photograph captured on location by a professional documentary photographer, not an illustration, not concept art, not an architectural visualization, not a 3D render, not a painting, not plastic-looking AI art. Use realistic imperfect natural details, plausible optics, fine real-world textures, natural contrast and restrained saturation."
   ].join(" ");

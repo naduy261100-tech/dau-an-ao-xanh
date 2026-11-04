@@ -354,7 +354,7 @@
     maskCanvas.width = width;
     maskCanvas.height = height;
     const maskCtx = maskCanvas.getContext("2d", { willReadFrequently: true });
-    maskCtx.filter = "blur(1.35px)";
+    maskCtx.filter = "blur(0.55px)";
     maskCtx.drawImage(results.segmentationMask, 0, 0, width, height);
     maskCtx.filter = "none";
     const mask = maskCtx.getImageData(0, 0, width, height).data;
@@ -399,15 +399,20 @@
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const i = (y * width + x) * 4;
-        let probability = mask[i] / 255;
+        const personProbability = mask[i] / 255;
+        const personT = Math.max(0, Math.min(1, (personProbability - 0.34) / 0.40));
+        const personAlpha = personT * personT * (3 - 2 * personT);
+        let alpha = personAlpha;
         if (hairValues) {
           const hairProbability = sampleFloatMask(hairValues, hairWidth, hairHeight, x, y, width, height);
-          probability = Math.max(probability, Math.min(1, hairProbability * 0.96));
+          const hairT = Math.max(0, Math.min(1, (hairProbability - 0.16) / 0.58));
+          const hairAlpha = hairT * hairT * (3 - 2 * hairT);
+          // HairSegmenter only recovers fine hair pixels; it does not expand
+          // the entire body matte or introduce a broad translucent halo.
+          alpha = Math.max(personAlpha, Math.min(1, hairAlpha * 0.94));
         }
-        const t = Math.max(0, Math.min(1, (probability - 0.075) / 0.82));
-        const alpha = t * t * (3 - 2 * t);
         pixels[i + 3] = Math.round(pixels[i + 3] * alpha);
-        if (alpha > 0.035) {
+        if (alpha > 0.075) {
           if (x < minX) minX = x;
           if (x > maxX) maxX = x;
           if (y < minY) minY = y;
@@ -423,7 +428,7 @@
     cleanEdgeColorFringe(pixels, width, height);
     ctx.putImageData(image, 0, 0);
 
-    const margin = Math.round(Math.max(width, height) * 0.018);
+    const margin = Math.round(Math.max(width, height) * 0.006);
     minX = Math.max(0, minX - margin);
     minY = Math.max(0, minY - margin);
     maxX = Math.min(width - 1, maxX + margin);
@@ -440,13 +445,36 @@
     return { canvas: trimmed, touchesBottom, aspect, framing, hairRefined };
   }
 
-  async function generateBackground(scene, mode, framing) {
+  function analyzeSubjectLight(subjectCanvas) {
+    const sample = document.createElement("canvas");
+    sample.width = 40;
+    sample.height = 40;
+    const ctx = sample.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(subjectCanvas, 0, 0, 40, 40);
+    const data = ctx.getImageData(0, 0, 40, 40).data;
+    let luminance = 0, warmth = 0, count = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] < 180) continue;
+      const r = data[i], g = data[i + 1], b = data[i + 2];
+      luminance += (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+      warmth += (r - b) / Math.max(32, r + g + b);
+      count++;
+    }
+    sample.width = sample.height = 0;
+    if (!count) return { brightness: 0.52, warmth: 0 };
+    return {
+      brightness: Math.round((luminance / count) * 100) / 100,
+      warmth: Math.round((warmth / count) * 100) / 100
+    };
+  }
+
+  async function generateBackground(scene, mode, framing, light) {
     const seed = Math.floor(Math.random() * 2147483646) + 1;
     const response = await fetch("/api/background", {
       method: "POST",
       headers: { "content-type": "application/json" },
       cache: "no-store",
-      body: JSON.stringify({ scene, mode, seed, framing })
+      body: JSON.stringify({ scene, mode, seed, framing, light })
     });
     if (!response.ok) {
       let message = "Chưa tải được phông nền. Vui lòng thử lại.";
@@ -504,12 +532,14 @@
 
     const subject = person.canvas;
     const fullBody = person.framing === "full-body";
-    const fit = Math.min((width * (fullBody ? 0.76 : 0.60)) / subject.width, (height * (fullBody ? 0.82 : 0.68)) / subject.height);
+    // A portrait/waist-up source is framed as an environmental portrait,
+    // never enlarged until the head fills the frame like a sticker.
+    const fit = Math.min((width * (fullBody ? 0.70 : 0.50)) / subject.width, (height * (fullBody ? 0.78 : 0.58)) / subject.height);
     const subjectWidth = subject.width * fit;
     const subjectHeight = subject.height * fit;
     const x = (width - subjectWidth) / 2;
     const bottomMargin = person.touchesBottom ? 4 : 24;
-    const y = fullBody ? height - subjectHeight - bottomMargin : Math.round((height - subjectHeight) * 0.36);
+    const y = fullBody ? height - subjectHeight - bottomMargin : Math.round((height - subjectHeight) * 0.46);
     const footY = Math.min(height - 8, y + subjectHeight * 0.985);
 
     // Contact shadow is deliberately subtle. Avoid outlining the whole cutout,
@@ -517,19 +547,12 @@
     if (fullBody) {
       ctx.save();
       const groundBrightness = sampleLuminance(ctx, width * 0.3, height * 0.84, width * 0.4, height * 0.12);
-      const shadowAlpha = Math.max(0.12, Math.min(0.24, 0.27 - groundBrightness * 0.14));
-      ctx.filter = "blur(18px)";
+      const shadowAlpha = Math.max(0.08, Math.min(0.16, 0.18 - groundBrightness * 0.08));
+      ctx.filter = "blur(13px)";
       ctx.fillStyle = "rgba(12,22,14," + shadowAlpha.toFixed(3) + ")";
       ctx.beginPath();
-      ctx.ellipse(width / 2 + subjectWidth * 0.025, footY, Math.max(45, subjectWidth * 0.22), Math.max(10, subjectWidth * 0.022), 0, 0, Math.PI * 2);
+      ctx.ellipse(width / 2 + subjectWidth * 0.015, footY, Math.max(36, subjectWidth * 0.17), Math.max(8, subjectWidth * 0.018), 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.restore();
-    } else {
-      ctx.save();
-      ctx.shadowColor = "rgba(12,22,14,0.13)";
-      ctx.shadowBlur = 14;
-      ctx.shadowOffsetY = 5;
-      ctx.drawImage(subject, x, y, subjectWidth, subjectHeight);
       ctx.restore();
     }
 
@@ -564,8 +587,9 @@
         selectedMode === "ai-background"
           ? "AI tạo một cảnh mới theo chủ đề bạn đã chọn. Ảnh người vẫn ở trên điện thoại."
           : "Đang lấy ảnh phong cảnh cố định đã chọn.");
-      background = await generateBackground(selectedScene, selectedMode, person.framing);
-      setProgress(78, "ĐANG PHỐI GHÉP", "Đang hoàn thiện ảnh chất lượng cao…", "Giữ nguyên dữ liệu khuôn mặt từ ảnh chụp gốc, ghép người lên nền vừa tạo.");
+      const subjectLight = analyzeSubjectLight(person.canvas);
+      background = await generateBackground(selectedScene, selectedMode, person.framing, subjectLight);
+      setProgress(78, "ĐANG PHỐI GHÉP", "Đang cân ánh sáng và hoàn thiện ảnh…", "Ảnh người vẫn được giữ từ ảnh gốc; AI chỉ nhận thống kê ánh sáng tổng quát để tạo nền hài hòa hơn.");
       const output = await compositeImage(background.bitmap, person);
       clearResult();
       resultBlob = output;
