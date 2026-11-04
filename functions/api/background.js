@@ -226,10 +226,23 @@ export async function onRequestPost({ request, env }) {
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error || "unknown-error");
-    console.error("FLUX.1 Schnell background generation failed:", detail.slice(0, 400));
+    const normalized = detail.toLowerCase();
+    console.error("FLUX.2 Klein 4B background generation failed:", detail.slice(0, 500));
+    const dailyQuotaExhausted =
+      normalized.includes("4006") ||
+      normalized.includes("daily free allocation") ||
+      normalized.includes("10,000 neurons");
+    if (dailyQuotaExhausted) {
+      return json({
+        message: "Đã hết hạn mức AI miễn phí hôm nay của tài khoản Cloudflare (10.000 Neurons/ngày). Đây không phải lỗi ảnh chụp hay kết nối Internet. Hạn mức tự làm mới lúc 07:00 sáng giờ Việt Nam mỗi ngày. Trong lúc chờ, bạn có thể chọn “Dùng nền thư viện có sẵn” hoặc thử tạo nền AI lại sau giờ làm mới.",
+        errorCode: "AI_DAILY_QUOTA_EXHAUSTED",
+        retryAt: "00:00 UTC"
+      }, 429);
+    }
     return json({
-      message: "AI chưa tạo được phông nền mới. Có thể mô hình đang bận hoặc đã hết hạn mức miễn phí trong ngày. Vui lòng thử tạo lại hoặc chuyển sang nền thư viện; ảnh người vẫn chưa được gửi lên AI.",
-      errorCode: detail.slice(0, 100)
+      message: "Dịch vụ tạo phông nền AI đang gặp lỗi từ mô hình. Vui lòng thử lại sau hoặc chọn “Dùng nền thư viện có sẵn”. Ảnh người vẫn chưa được gửi lên AI.",
+      errorCode: "AI_BACKGROUND_GENERATION_FAILED",
+      providerDetail: detail.slice(0, 160)
     }, 503);
   }
 }
