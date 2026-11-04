@@ -62,7 +62,7 @@ export async function onRequestPost({ request, env }) {
   try {
     const result = await env.AI.run("@cf/black-forest-labs/flux-1-schnell", {
       prompt: PROMPTS[scene],
-      steps: 8,
+      steps: 4,
       seed: Math.floor(Math.random() * 2147483647)
     });
     if (!result || typeof result.image !== "string" || !result.image) {
@@ -80,7 +80,16 @@ export async function onRequestPost({ request, env }) {
         "content-disposition": "inline; filename=\"tuyen-quang-ai-background.jpg\""
       }
     });
-  } catch (_) {
-    return json({ message: "Hạn mức AI miễn phí hôm nay có thể đã hết hoặc Cloudflare AI đang bận. Vui lòng thử lại sau khi hạn mức được làm mới." }, 429);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error || "Unknown Workers AI error");
+    console.error("Workers AI background generation failed:", detail.slice(0, 500));
+    const lower = detail.toLowerCase();
+    if (lower.includes("daily free allocation") || lower.includes("used up")) {
+      return json({ message: "Hạn mức AI miễn phí hôm nay đã hết. Vui lòng thử lại sau khi Cloudflare làm mới hạn mức." }, 429);
+    }
+    if (lower.includes("capacity") || lower.includes("temporarily exceeded") || lower.includes("busy")) {
+      return json({ message: "Mô hình AI đang bận. Vui lòng thử lại sau ít phút; website không chuyển sang dịch vụ trả phí." }, 503);
+    }
+    return json({ message: "AI chưa tạo được phong cảnh lần này. Vui lòng thử lại sau." }, 502);
   }
 }
