@@ -7,43 +7,67 @@ const BACKGROUNDS = {
     title: "Golden terraced rice fields",
     author: "Quang Nguyen Vinh / Pexels",
     url: "https://images.pexels.com/photos/14025282/pexels-photo-14025282.jpeg?auto=compress&cs=tinysrgb&w=1800",
-    prompt: "Photorealistic editorial travel photograph of golden terraced rice fields in northern Vietnam, shot with a full-frame camera and natural 35mm lens. Vertical 4:5 composition, natural human-eye viewpoint, layered golden rice terraces and dark forested mountains in the distance, a narrow earthy footpath or terrace edge in the lower foreground where a visitor can naturally stand, soft late afternoon daylight, realistic atmospheric depth, balanced exposure and natural colors. No people, no text, no logos, no watermark, no illustration, no fantasy."
+    prompt: "Photorealistic travel portrait background of golden terraced rice fields in northern Vietnam. Ground-level human-eye camera, vertical 4:5 composition. A clearly visible dry earthen footpath or broad terrace edge crosses the lower foreground and forms a safe standing place, with golden fields and mountains behind. Natural late afternoon daylight, believable perspective and textures. No people, no text, no logo, no watermark, no illustration."
   },
   "rice-green": {
-    title: "Green terraced valley",
+    title: "Green terraced valley with a walking path",
     author: "Duc Nguyen / Pexels",
     url: "https://images.pexels.com/photos/35872968/pexels-photo-35872968.jpeg?auto=compress&cs=tinysrgb&w=1800",
-    prompt: "Photorealistic travel photograph of a lush green terraced rice valley in northern Vietnam, vertical 4:5 frame from human eye level, gentle hillside rice terraces in the foreground, forested limestone peaks beyond, realistic field edges and a small open path in the lower center, cloudy soft daylight, accurate natural greens, true photographic texture, no people, no text, no watermark, no fantasy."
+    prompt: "Photorealistic ground-level travel photograph of a lush green terraced valley in northern Vietnam. The lower foreground must clearly show a dry farm path or solid terrace walkway wide enough for one visitor to stand. Green rice fields and forested limestone mountains in the distance, soft daylight, natural colors, realistic camera perspective. No people, no text, no watermark."
   },
   "rice-path": {
-    title: "Path through rice terraces",
+    title: "Winding path through rice terraces",
     author: "Ahmet Yüksek / Pexels",
     url: "https://images.pexels.com/photos/36972555/pexels-photo-36972555.jpeg?auto=compress&cs=tinysrgb&w=1800",
-    prompt: "Photorealistic documentary photograph of a winding footpath between rice terraces in rural Vietnam, vertical 4:5 composition, camera at standing eye height, path entering from the lower center foreground, fields on both sides, wooded mountains and open sky in the distance, natural daylight, realistic earth texture, believable human-scale perspective and shadows, no people, no text, no logos, no watermark."
+    prompt: "Photorealistic documentary travel photograph of a dry winding footpath between rice terraces in rural northern Vietnam. The path begins at the lower edge and stays clearly visible across the foreground as the natural place to stand; do not use rice paddies as the standing surface. Human-eye viewpoint, fields on both sides, wooded mountains in the distance, natural daylight. No people, text, logo or watermark."
   },
-  "mountain-lake": {
-    title: "Mountain lake",
+  "village-stone": {
+    title: "Stone path in a mountain village",
+    author: "Beyza Kaplan / Pexels",
+    url: "https://images.pexels.com/photos/13990021/pexels-photo-13990021.jpeg?auto=compress&cs=tinysrgb&w=1800",
+    prompt: "Photorealistic travel photograph of a northern Vietnamese mountain village. A broad, dry, stone-paved footpath is clearly visible in the lower foreground and leads toward traditional village houses and green mountains. Ground-level standing viewpoint, natural daylight, realistic stone texture and human-scale perspective. No people, no signs, no text, no watermark."
+  },
+  "village-road": {
+    title: "Mountain village road",
+    author: "Thanh Luu / Pexels",
+    url: "https://images.pexels.com/photos/18707791/pexels-photo-18707791.jpeg?auto=compress&cs=tinysrgb&w=1800",
+    prompt: "Photorealistic travel photograph of a quiet mountain village in Vietnam. Show a clearly visible dry village road or paved lane in the lower foreground, wide and level enough for a person to stand safely, with houses, blossoming trees and misty green mountains behind. Ground-level natural camera perspective, authentic daylight and colors. No people, no vehicles, no text, no watermark."
+  },
+  "hill-path": {
+    title: "Winding trail across green hills",
+    author: "Tường Chopper / Pexels",
+    url: "https://images.pexels.com/photos/33753208/pexels-photo-33753208.jpeg?auto=compress&cs=tinysrgb&w=1800",
+    prompt: "Photorealistic travel photograph of rolling green hills in Vietnam. A winding, dry, walkable dirt or gravel trail is clearly visible across the lower foreground and is the only place intended for a standing visitor. Ground-level human-eye view, green slopes and distant sky, realistic scale, soft natural daylight. No person, no text, no watermark, no aerial viewpoint."
+  },
+  "wood-bridge": {
+    title: "Wooden footbridge in a green forest",
     author: "Quang Nguyen Vinh / Pexels",
-    url: "https://images.pexels.com/photos/14023494/pexels-photo-14023494.jpeg?auto=compress&cs=tinysrgb&w=1800",
-    prompt: "Photorealistic editorial travel photograph of a calm emerald mountain lake in northern Vietnam, vertical 4:5 composition from a natural rocky lakeside viewpoint, a broad believable flat rock or shore area across the lower foreground where one standing visitor can be placed, limestone mountains and green islands across the water, soft bright daylight, natural reflections, true camera texture, no people, no boats, no signs, no text, no watermark."
+    url: "https://images.pexels.com/photos/15610727/pexels-photo-15610727.jpeg?auto=compress&cs=tinysrgb&w=1800",
+    prompt: "Photorealistic forest travel photograph with a sturdy wooden footbridge crossing a small stream. The wooden plank deck must be broad, dry and clearly visible in the lower foreground, leading into lush trees; this bridge deck is the safe standing surface. Camera at human standing height, realistic perspective and soft filtered daylight. The stream is only below and beside the bridge, never the standing surface. No people, text or watermark."
   },
-  "mist-lake": {
-    title: "Forest mountain lake",
-    author: "Red Nguyen / Pexels",
-    url: "https://images.pexels.com/photos/17924726/pexels-photo-17924726.jpeg?auto=compress&cs=tinysrgb&w=1800",
-    prompt: "Photorealistic cinematic travel photograph of a mountain lake surrounded by lush green forest in Vietnam, vertical 4:5 portrait frame, quiet shoreline and a natural standing area in the lower foreground, mist drifting through layered mountain slopes, soft diffused sunrise light, realistic water and atmospheric perspective, subtle colors, no people, no text, no graphics, no watermark."
+  "garden-walk": {
+    title: "Walkway in a lush garden",
+    author: "nhavantuonglai / Pexels",
+    url: "https://images.pexels.com/photos/40540628/pexels-photo-40540628.jpeg?auto=compress&cs=tinysrgb&w=1800",
+    prompt: "Photorealistic travel portrait background of a lush Vietnamese garden. A continuous stone or paved garden walkway must be prominent in the lower foreground, wide enough for a visitor to stand with both feet on it. Dense greenery and flowers frame the walkway. Ground-level eye-height camera, natural daylight, realistic depth and colors. No people, no text, no watermark."
+  },
+  "traditional-garden": {
+    title: "Traditional wooden house garden",
+    author: "juliber Tran / Pexels",
+    url: "https://images.pexels.com/photos/36964081/pexels-photo-36964081.jpeg?auto=compress&cs=tinysrgb&w=1800",
+    prompt: "Photorealistic travel photograph of a traditional Vietnamese wooden house set in a peaceful garden. Clearly show a solid stone courtyard or stone pathway in the lower foreground where a visitor can naturally stand, with the wooden house and green plants behind. Ground-level human-eye viewpoint, authentic wood and stone textures, soft natural daylight. No people, no text, no watermark."
+  },
+  "flower-garden": {
+    title: "Flower garden with a paved walkway",
+    author: "Nguyễn Tiến Thịnh / Pexels",
+    url: "https://images.pexels.com/photos/35457218/pexels-photo-35457218.jpeg?auto=compress&cs=tinysrgb&w=1800",
+    prompt: "Photorealistic outdoor travel photograph of a colorful flower garden in Vietnam. A clearly visible dry paved or stone walkway runs through the lower foreground between flower beds, with enough open width for one visitor to stand. Keep the path continuous beneath the intended standing position. Human-eye camera angle, soft daylight, realistic colors and depth. No people, no text, no watermark."
   },
   "waterfall": {
-    title: "Forest waterfall",
+    title: "Forest waterfall with dry stone viewing area",
     author: "Pexels",
     url: "https://images.pexels.com/photos/35424576/pexels-photo-35424576.jpeg?auto=compress&cs=tinysrgb&w=1800",
-    prompt: "Photorealistic travel photograph of a waterfall in a lush Vietnamese forest, vertical 4:5 composition, waterfall in the middle distance with mossy boulders and a clear dry rock ledge in the lower foreground for a visitor to stand on, soft natural forest daylight, realistic water motion, true photographic colors, no people, no text, no signs, no watermark."
-  },
-  "forest-stream": {
-    title: "Forest stream",
-    author: "Ella Ragasa / Pexels",
-    url: "https://images.pexels.com/photos/30873702/pexels-photo-30873702.jpeg?auto=compress&cs=tinysrgb&w=1800",
-    prompt: "Photorealistic editorial photograph of a clear stream winding through a dense green Vietnamese forest, vertical 4:5 frame, foreground mossy rocks and a small dry bank at the lower center suitable for a standing person, lush trees and soft filtered daylight, realistic natural textures, neutral camera color, no people, no wildlife, no text, no watermark."
+    prompt: "Photorealistic travel photograph of a waterfall in a lush Vietnamese forest. A broad, stable, dry stone viewing platform or flat rock clearing is clearly visible in the lower foreground, separated from the running water, as the safe place to stand. Mossy boulders and waterfall in the middle distance, natural forest daylight, realistic water and camera perspective. No people, text, signs or watermark."
   }
 };
 

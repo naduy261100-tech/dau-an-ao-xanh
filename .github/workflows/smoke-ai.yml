@@ -15,7 +15,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          scenes=(rice-gold rice-green rice-path mountain-lake mist-lake waterfall forest-stream)
+          scenes=(rice-gold rice-green rice-path village-stone village-road hill-path wood-bridge garden-walk traditional-garden flower-garden waterfall)
           index=0
           for scene in "${scenes[@]}"; do
             index=$((index + 1))
@@ -45,7 +45,7 @@ jobs:
               *) echo "Missing or unknown background source"; exit 1 ;;
             esac
           done
-          echo "PASS: All seven background choices returned a usable image without uploading any personal photo."
+          echo "PASS: All eleven background choices returned a usable image without uploading any personal photo."
 
       - name: Smoke test free FLUX.2 Klein 4B two-reference editing with a public sample portrait
         shell: bash

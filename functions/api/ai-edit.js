@@ -5,34 +5,17 @@ const MODEL = "@cf/black-forest-labs/flux-2-klein-4b";
 const MAX_IMAGE_BASE64_LENGTH = 1_500_000;
 
 const BACKGROUNDS = {
-  "rice-gold": {
-    title: "ruộng bậc thang lúa chín vàng ở miền núi phía Bắc Việt Nam",
-    url: "https://images.pexels.com/photos/14025282/pexels-photo-14025282.jpeg?auto=compress&cs=tinysrgb&w=400&h=500&fit=crop"
-  },
-  "rice-green": {
-    title: "thung lũng ruộng bậc thang xanh với núi rừng phía xa",
-    url: "https://images.pexels.com/photos/35872968/pexels-photo-35872968.jpeg?auto=compress&cs=tinysrgb&w=400&h=500&fit=crop"
-  },
-  "rice-path": {
-    title: "lối nhỏ uốn quanh giữa những thửa ruộng bậc thang",
-    url: "https://images.pexels.com/photos/36972555/pexels-photo-36972555.jpeg?auto=compress&cs=tinysrgb&w=400&h=500&fit=crop"
-  },
-  "mountain-lake": {
-    title: "hồ nước xanh trong giữa núi đá và rừng cây",
-    url: "https://images.pexels.com/photos/14023494/pexels-photo-14023494.jpeg?auto=compress&cs=tinysrgb&w=400&h=500&fit=crop"
-  },
-  "mist-lake": {
-    title: "hồ núi giữa rừng xanh với không khí sương nhẹ",
-    url: "https://images.pexels.com/photos/17924726/pexels-photo-17924726.jpeg?auto=compress&cs=tinysrgb&w=400&h=500&fit=crop"
-  },
-  "waterfall": {
-    title: "thác nước tự nhiên giữa khu rừng nhiệt đới xanh mát",
-    url: "https://images.pexels.com/photos/35424576/pexels-photo-35424576.jpeg?auto=compress&cs=tinysrgb&w=400&h=500&fit=crop"
-  },
-  "forest-stream": {
-    title: "con suối trong len qua rừng cây và những tảng đá phủ rêu",
-    url: "https://images.pexels.com/photos/30873702/pexels-photo-30873702.jpeg?auto=compress&cs=tinysrgb&w=400&h=500&fit=crop"
-  }
+  "rice-gold": { title: "ruộng bậc thang lúa chín vàng", standingSurface: "a dry earthen footpath or broad terrace edge visible in the lower foreground", url: "https://images.pexels.com/photos/14025282/pexels-photo-14025282.jpeg?auto=compress&cs=tinysrgb&w=400&h=500&fit=crop" },
+  "rice-green": { title: "thung lũng ruộng bậc thang xanh", standingSurface: "a dry farm path or solid terrace walkway in the foreground, not the rice paddy", url: "https://images.pexels.com/photos/35872968/pexels-photo-35872968.jpeg?auto=compress&cs=tinysrgb&w=400&h=500&fit=crop" },
+  "rice-path": { title: "con đường nhỏ giữa ruộng bậc thang", standingSurface: "the clearly visible dry winding footpath through the fields", url: "https://images.pexels.com/photos/36972555/pexels-photo-36972555.jpeg?auto=compress&cs=tinysrgb&w=400&h=500&fit=crop" },
+  "village-stone": { title: "đường đá trong bản làng miền núi", standingSurface: "the broad, dry, stone-paved village footpath", url: "https://images.pexels.com/photos/13990021/pexels-photo-13990021.jpeg?auto=compress&cs=tinysrgb&w=400&h=500&fit=crop" },
+  "village-road": { title: "con đường khô ráo trong bản làng miền núi", standingSurface: "the visible, level village road in the lower foreground", url: "https://images.pexels.com/photos/18707791/pexels-photo-18707791.jpeg?auto=compress&cs=tinysrgb&w=400&h=500&fit=crop" },
+  "hill-path": { title: "lối mòn uốn quanh đồi xanh", standingSurface: "the dry dirt or gravel trail visible across the foreground", url: "https://images.pexels.com/photos/33753208/pexels-photo-33753208.jpeg?auto=compress&cs=tinysrgb&w=400&h=500&fit=crop" },
+  "wood-bridge": { title: "cầu gỗ giữa khu rừng xanh", standingSurface: "the solid wooden plank deck of the footbridge, with both feet on the planks and water only below the bridge", url: "https://images.pexels.com/photos/15610727/pexels-photo-15610727.jpeg?auto=compress&cs=tinysrgb&w=400&h=500&fit=crop" },
+  "garden-walk": { title: "lối đi lát đá trong khu vườn xanh", standingSurface: "the continuous paved or stone garden walkway in the lower foreground", url: "https://images.pexels.com/photos/40540628/pexels-photo-40540628.jpeg?auto=compress&cs=tinysrgb&w=400&h=500&fit=crop" },
+  "traditional-garden": { title: "sân vườn và lối đá trước ngôi nhà gỗ truyền thống", standingSurface: "the solid stone courtyard or stone pathway in front of the wooden house", url: "https://images.pexels.com/photos/36964081/pexels-photo-36964081.jpeg?auto=compress&cs=tinysrgb&w=400&h=500&fit=crop" },
+  "flower-garden": { title: "vườn hoa nhiều màu với lối đi lát đá", standingSurface: "the dry paved or stone walkway that runs between the flower beds", url: "https://images.pexels.com/photos/35457218/pexels-photo-35457218.jpeg?auto=compress&cs=tinysrgb&w=400&h=500&fit=crop" },
+  "waterfall": { title: "thác nước giữa rừng với bãi đá khô", standingSurface: "a broad, stable, dry stone viewing platform in the lower foreground, well away from the running water", url: "https://images.pexels.com/photos/35424576/pexels-photo-35424576.jpeg?auto=compress&cs=tinysrgb&w=400&h=500&fit=crop" }
 };
 
 function json(data, status = 200) {
@@ -150,14 +133,16 @@ export async function onRequestPost({ request, env }) {
     form.append("input_image_1", personBlob, "person-photo.jpg");
     form.append("prompt", [
       "Create one highly photorealistic, natural travel portrait by editing and combining the two reference images.",
-      "Image 0 is the selected real landscape photograph. Use it as the actual place and preserve its recognizable scenery, terrain, colors and photographic character.",
-      "Image 1 contains the real person. Take this exact person from image 1 and place them naturally into image 0, standing on a believable foreground path, bank or safe flat ground area.",
-      "The person's identity is the highest priority. Preserve the same recognizable face, facial proportions, eyes, nose, mouth, skin tone, age, hairstyle, expression, glasses if present, clothing, body shape, pose and personal details. Do not invent another person or beautify or redesign their face.",
-      "Remove the original background around the person in image 1. Do not preserve its room, wall or scenery. Integrate the person into image 0 as if both were photographed together at the same moment.",
-      "Match realistic human scale, camera viewpoint, horizon, perspective, depth of field, ambient light, color temperature, light direction and softness. Add only physically plausible foot contact and subtle ground shadows consistent with the selected landscape.",
+      "Image 0 is the selected real landscape photograph. Use it as the actual place and preserve its recognizable scenery, terrain, vegetation, architecture, colors and photographic character.",
+      "Image 1 contains the exact real person. Remove the original background around this person and place this same person naturally into image 0.",
+      "CRITICAL PHYSICAL PLACEMENT: the person must stand on " + scene.standingSurface + ". The walking surface must visibly continue underneath both feet. Show both shoes or feet making believable contact with the ground or floor whenever they are visible in the source photo.",
+      "NEVER put the person on the surface of a lake, river, pond, stream or waterfall; never make them float, hover, stand on crops, flower beds, water, empty air, a roof or the edge of a cliff. Water is scenery only, never a floor.",
+      "If the reference photo does not provide enough clear standing room, naturally extend or create a small, physically plausible continuation of the same path, bridge deck, courtyard or dry stone platform in the lower foreground. It must connect seamlessly to the existing terrain and match the scene; do not invent a floating platform.",
+      "The person's identity is the highest priority. Preserve the same recognizable face, facial proportions, eyes, nose, mouth, skin tone, age, hairstyle, expression, glasses if present, clothing, body shape, pose and personal details. Do not invent another person or redesign their face.",
+      "Match realistic human scale, ground-level camera viewpoint, horizon, perspective, depth of field, ambient light, color temperature, light direction and softness. Add subtle contact shadows directly under the shoes and natural shadowing consistent with the selected scene.",
       "Keep the person's pose and clothing unchanged. Keep hands and fingers natural. Do not add other people, signs, text, logos, frames or watermarks.",
-      "The result must look like an ordinary high-quality real camera photograph, not a pasted cutout, collage, illustration or fantasy scene.",
-      "Use a vertical portrait composition. Keep as much of the person visible as the source photo allows."
+      "The result must look like a normal high-quality real camera photograph taken at this location, not a pasted cutout, collage, illustration or fantasy scene.",
+      "Use a vertical portrait composition. Keep as much of the person visible as the source photo allows. Do not crop off the feet when they are present in the source photo."
     ].join(" "));
     form.append("width", "768");
     form.append("height", "960");

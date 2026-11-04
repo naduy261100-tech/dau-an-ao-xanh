@@ -36,13 +36,17 @@
   };
 
   const SCENES = {
-    "rice-gold": { title: "Ruộng bậc thang vàng", author: "Quang Nguyen Vinh" },
-    "rice-green": { title: "Thung lũng ruộng xanh", author: "Duc Nguyen" },
-    "rice-path": { title: "Lối nhỏ giữa ruộng", author: "Ahmet Yüksek" },
-    "mountain-lake": { title: "Hồ núi xanh", author: "Quang Nguyen Vinh" },
-    "mist-lake": { title: "Hồ núi giữa rừng", author: "Red Nguyen" },
-    "waterfall": { title: "Thác giữa rừng", author: "Pexels" },
-    "forest-stream": { title: "Suối rừng xanh", author: "Ella Ragasa" }
+    "rice-gold": { title: "Ruộng bậc thang vàng", author: "Quang Nguyen Vinh / Pexels" },
+    "rice-green": { title: "Thung lũng ruộng xanh", author: "Duc Nguyen / Pexels" },
+    "rice-path": { title: "Con đường giữa ruộng", author: "Ahmet Yüksek / Pexels" },
+    "village-stone": { title: "Đường đá bản làng", author: "Beyza Kaplan / Pexels" },
+    "village-road": { title: "Đường làng miền núi", author: "Thanh Luu / Pexels" },
+    "hill-path": { title: "Lối mòn đồi xanh", author: "Tường Chopper / Pexels" },
+    "wood-bridge": { title: "Cầu gỗ giữa rừng", author: "Quang Nguyen Vinh / Pexels" },
+    "garden-walk": { title: "Lối vườn xanh", author: "nhavantuonglai / Pexels" },
+    "traditional-garden": { title: "Vườn nhà gỗ", author: "juliber Tran / Pexels" },
+    "flower-garden": { title: "Vườn hoa rực rỡ", author: "Nguyễn Tiến Thịnh / Pexels" },
+    "waterfall": { title: "Thác rừng trên bậc đá", author: "Pexels" }
   };
 
   let selectedScene = "rice-gold";
@@ -491,7 +495,7 @@
         throw new Error("Không thể chuẩn bị ảnh để gửi tới AI. Vui lòng chụp lại.");
       }
 
-      setProgress(32, "ĐANG GỬI ẢNH ĐÃ ĐƯỢC CHẤP THUẬN", "AI đang tiếp nhận ảnh…", "Ảnh gốc được gửi tới Cloudflare AI để chỉnh sửa bằng FLUX.2 Klein 4B trong hạn mức miễn phí 10.000 neurons/ngày. Ảnh tham chiếu được gửi ở kích thước tối ưu cho xử lý.");
+      setProgress(32, "ĐANG GỬI ẢNH ĐÃ ĐƯỢC CHẤP THUẬN", "AI đang tiếp nhận ảnh…", "Ảnh gốc được gửi tới Cloudflare AI để chỉnh sửa bằng FLUX.2 Klein 4B trong hạn mức miễn phí. AI được yêu cầu đặt người trên đúng đường, sân, cầu hoặc bậc đá và giữ cả hai chân tiếp xúc mặt nền.");
       const response = await fetch("/api/ai-edit", {
         method: "POST",
         headers: { "content-type": "application/json" },
