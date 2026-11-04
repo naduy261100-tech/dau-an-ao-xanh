@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
 <title>Thông tin xử lý ảnh | Dấu ấn Áo xanh</title>
-<link rel="stylesheet" href="/assets/styles.css?v=20261104-walkable-scenes">
+<link rel="stylesheet" href="/assets/styles.css?v=20261104-face-preserve">
 <style>
 .policy{max-width:760px;margin:22px auto;padding:clamp(20px,5vw,34px);background:#fff;border:1px solid #e3ebe5;border-radius:18px;box-shadow:0 18px 50px rgba(20,47,34,.07)}
 .policy-kicker{color:#08794f;font-size:10px;font-weight:850;letter-spacing:.13em}
@@ -24,17 +24,18 @@
 <h1>Thông tin xử lý ảnh và quyền riêng tư</h1>
 <p>Ứng dụng có hai chế độ xử lý ảnh riêng biệt. Người dùng tự chọn chế độ trước khi mở camera. Chế độ gửi ảnh lên AI chỉ được thực hiện sau khi người dùng tick ô chấp thuận riêng.</p>
 
-<h2>1. Chế độ riêng tư trên điện thoại</h2>
+<h2>1. Chế độ giữ nguyên khuôn mặt trên điện thoại (khuyên dùng)</h2>
 <ol>
 <li>Camera hệ thống của điện thoại tạo ảnh sau khi người dùng cấp quyền.</li>
 <li>MediaPipe Selfie Segmentation chạy trong trình duyệt để nhận diện người và tạo vùng nền trong suốt.</li>
+<li>Phần người được lấy trực tiếp từ ảnh chụp gốc. Ứng dụng không dùng mô hình tạo sinh để vẽ lại khuôn mặt, tóc hoặc trang phục.</li>
 <li>Ảnh gốc và phần người đã tách không được tải lên máy chủ, không gửi tới Pexels.</li>
 <li>Trình duyệt chỉ gửi mã phông nền chung đã chọn tới máy chủ để nhận ảnh phong cảnh.</li>
-<li>Người và phong cảnh được ghép trên thiết bị bằng Canvas. Đây là ghép ảnh 2D, chưa phải tái dựng toàn bộ không gian bằng AI.</li>
+<li>Người và phong cảnh được ghép trên thiết bị bằng Canvas, xuất JPEG 1600 × 2000 px chất lượng cao. Đây là ghép 2D, không phải tái dựng toàn bộ không gian bằng AI.</li>
 </ol>
-<p>Ở chế độ này, ảnh cá nhân chỉ nằm tạm trong bộ nhớ thiết bị khi trang còn mở. Website không lưu ảnh vào tài khoản, thư viện, cơ sở dữ liệu, KV, R2 hoặc ổ đĩa.</p>
+<p>Ở chế độ này, khuôn mặt và màu sắc trong phần người được giữ từ ảnh chụp gốc, chỉ bị thay đổi do thao tác tách nền, thu phóng và nén JPEG khi xuất ảnh. Ảnh cá nhân chỉ nằm tạm trong bộ nhớ thiết bị khi trang còn mở. Website không lưu ảnh vào tài khoản, thư viện, cơ sở dữ liệu, KV, R2 hoặc ổ đĩa.</p>
 
-<h2>2. Chế độ AI phối cảnh (miễn phí trong hạn mức)</h2>
+<h2>2. Chế độ AI sáng tạo toàn cảnh (miễn phí trong hạn mức)</h2>
 <ol>
 <li>Người dùng phải chọn chế độ “AI phối cảnh chân thực hơn”, xác nhận quyền sử dụng ảnh và tick ô chấp thuận riêng việc gửi ảnh.</li>
 <li>Ảnh được thu nhỏ trên thiết bị để phù hợp giới hạn ảnh tham chiếu của mô hình rồi gửi qua HTTPS tới máy chủ Cloudflare của ứng dụng.</li>
