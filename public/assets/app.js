@@ -591,12 +591,13 @@
   }
 
   function openUploadPicker() {
-    if (!consentAccepted || !el.consentCheck.checked) {
+    if (!el.consentCheck.checked) {
       showScreen("consent");
       showError("Vui lòng xác nhận quyền sử dụng ảnh trước khi tải ảnh lên để ghép.");
       updateAgreeButton();
       return;
     }
+    consentAccepted = true;
     clearError();
     el.uploadPhotoInput.value = "";
     el.uploadPhotoInput.click();
