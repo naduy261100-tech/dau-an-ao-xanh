@@ -46,13 +46,15 @@ jobs:
           SIZE="$(wc -c < "$output")"
           SOURCE="$(grep -i '^x-background-source:' "$headers" | tail -1 | tr -d '\r' | awk -F': ' '{print $2}' || true)"
           MODEL="$(grep -i '^x-background-model:' "$headers" | tail -1 | tr -d '\r' | awk -F': ' '{print $2}' || true)"
-          echo "AI_BACKGROUND_CONTENT_TYPE=$MIME BYTES=$SIZE SOURCE=$SOURCE MODEL=$MODEL"
+          VERSION="$(grep -i '^x-background-code-version:' "$headers" | tail -1 | tr -d '\r' | awk -F': ' '{print $2}' || true)"
+          echo "AI_BACKGROUND_CONTENT_TYPE=$MIME BYTES=$SIZE SOURCE=$SOURCE MODEL=$MODEL VERSION=$VERSION"
           echo "--- response headers ---"
           cat "$headers"
           test "$MIME" = "image/jpeg"
           test "$SIZE" -gt 10000
           test "$SOURCE" = "flux-ai"
           test "$MODEL" = "FLUX.1-Schnell"
+          test "$VERSION" = "20261104-no-seed-v2"
           echo "PASS: FLUX.1 Schnell generated a fresh background; no personal photo was uploaded."
 
       - name: Save AI background sample for visual review
