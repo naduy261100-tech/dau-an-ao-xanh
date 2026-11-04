@@ -1,5 +1,6 @@
 import { onRequestGet as getHealth } from "../functions/api/health.js";
 import { onRequestPost as generateBackground } from "../functions/api/background.js";
+import { onRequestPost as editPhotoWithAI } from "../functions/api/ai-edit.js";
 
 const SECURITY_HEADERS = {
   "X-Content-Type-Options": "nosniff",
@@ -37,6 +38,11 @@ export default {
     if (url.pathname === "/api/background") {
       if (request.method !== "POST") return json({ message: "Phương thức không được hỗ trợ." }, 405);
       return secure(await generateBackground(context));
+    }
+
+    if (url.pathname === "/api/ai-edit") {
+      if (request.method !== "POST") return json({ message: "Phương thức không được hỗ trợ." }, 405);
+      return secure(await editPhotoWithAI(context));
     }
 
     if (url.pathname.startsWith("/api/")) return json({ message: "Không tìm thấy API." }, 404);
