@@ -47,7 +47,7 @@ jobs:
           done
           echo "PASS: All seven background choices returned a usable image without uploading any personal photo."
 
-      - name: Smoke test free FLUX.2 Klein image editing with a public sample portrait
+      - name: Smoke test free FLUX.2 Klein 4B two-reference editing with a public sample portrait
         shell: bash
         run: |
           set -euo pipefail
