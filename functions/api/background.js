@@ -76,6 +76,7 @@ function json(data, status = 200) {
     status,
     headers: {
       "content-type": "application/json; charset=utf-8",
+      "x-background-code-version": "20261104-no-seed-v2",
       "cache-control": "no-store, private, max-age=0",
       "x-content-type-options": "nosniff"
     }
@@ -110,6 +111,7 @@ async function photoFallback(background) {
       "cache-control": "no-store, private, max-age=0",
       "x-content-type-options": "nosniff",
       "x-background-source": "photo-fallback",
+      "x-background-code-version": "20261104-no-seed-v2",
       "x-background-attribution": background.author,
       "x-background-title": background.title,
       "content-disposition": "inline; filename=\"dau-an-ao-xanh-background.jpg\""
@@ -196,6 +198,7 @@ export async function onRequestPost({ request, env }) {
         "cache-control": "no-store, private, max-age=0",
         "x-content-type-options": "nosniff",
         "x-background-source": "flux-ai",
+        "x-background-code-version": "20261104-no-seed-v2",
         "x-background-attribution": "",
         "x-background-title": selected.title,
         "x-background-seed": String(seed),
