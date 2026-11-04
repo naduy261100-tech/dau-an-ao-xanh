@@ -179,8 +179,7 @@ export async function onRequestPost({ request, env }) {
   try {
     const result = await env.AI.run("@cf/black-forest-labs/flux-1-schnell", {
       prompt,
-      steps: 6,
-      seed
+      steps: 6
     });
     if (!result || typeof result.image !== "string" || !result.image) {
       throw new Error("model-returned-no-image");
