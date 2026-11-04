@@ -7,6 +7,7 @@
   <meta name="description" content="Dấu ấn Áo xanh — Check-in AI của Chi đoàn Trường Tiểu học Minh Khương.">
   <title>Dấu ấn Áo xanh | Check-in AI Minh Khương</title>
   <link rel="stylesheet" href="/assets/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/selfie_segmentation.js" crossorigin="anonymous" defer></script>
 </head>
 <body>
   <div class="top-strip"></div>
@@ -36,12 +37,12 @@
         <div class="shield" aria-hidden="true">🛡️</div>
         <div class="consent-body">
           <strong>Thông tin xử lý ảnh</strong>
-          <p id="consentDescription">Ảnh sẽ được gửi qua kết nối bảo mật đến PhotoRoom để tạo phong cảnh AI và trả kết quả trực tiếp về điện thoại. Website không lưu ảnh vào thư viện hoặc cơ sở dữ liệu.</p>
+          <p id="consentDescription">Ảnh gốc được xử lý ngay trên điện thoại; không tải lên máy chủ.</p>
           <p><a class="privacy-link" href="/privacy.html" target="_blank" rel="noopener">Đọc đầy đủ thông tin xử lý ảnh và quyền riêng tư ↗</a></p>
-          <p class="small-note" id="consentWarning">Trong giai đoạn thử nghiệm, chỉ sử dụng ảnh của chính người trưởng thành đã đồng ý. Không sử dụng ảnh học sinh.</p>
+          <p class="small-note" id="consentWarning">Chỉ sử dụng ảnh khi người trong ảnh hoặc người đại diện đã cho phép.</p>
           <label class="check-row">
             <input type="checkbox" id="consentCheck">
-            <span id="consentLabel">Tôi từ đủ 18 tuổi, đây là ảnh của chính tôi và tôi đồng ý gửi ảnh để xử lý check-in.</span>
+            <span id="consentLabel">Tôi là người trong ảnh hoặc đã được người trong ảnh/người đại diện cho phép sử dụng ảnh này.</span>
           </label>
         </div>
       </section>
@@ -50,7 +51,7 @@
         <div class="camera-placeholder" id="cameraPlaceholder">
           <div class="camera-icon">📷</div>
           <strong>Sẵn sàng lưu giữ khoảnh khắc?</strong>
-          <span>Đứng nơi đủ sáng, nhìn vào camera và bấm mở camera. AI sẽ tự chọn phong cảnh phù hợp.</span>
+          <span>Đứng nơi đủ sáng, chụp rõ toàn thân và bấm mở camera. AI sẽ tự chọn phong cảnh phù hợp.</span>
         </div>
         <video id="cameraVideo" playsinline autoplay muted hidden></video>
         <img id="resultImage" alt="Ảnh check-in đã được AI xử lý" hidden>
@@ -66,12 +67,10 @@
         <button class="btn primary" id="captureBtn" type="button">CHỤP ẢNH & GHÉP NỀN</button>
       </div>
 
-      <div id="turnstileContainer" class="turnstile-container" aria-hidden="true"></div>
-
       <div class="processing" id="processingPanel" hidden>
         <div class="spinner"></div>
         <strong id="processingTitle">AI đang tạo phong cảnh cho bạn…</strong>
-        <span>Đang tách chủ thể, dựng nền và hòa phối ánh sáng. Vui lòng giữ kết nối Internet.</span>
+        <span>Ảnh gốc được tách người ngay trên điện thoại. AI chỉ tạo nền thiên nhiên; ảnh cuối cùng được ghép trên thiết bị.</span>
       </div>
 
       <div class="controls result-controls" id="resultControls" hidden>
@@ -81,21 +80,21 @@
       <div class="error-box" id="errorBox" role="alert" aria-live="polite" hidden></div>
 
       <div class="tip">
-        <span>✧</span><p><strong>Mẹo để ảnh tự nhiên hơn:</strong> nên chụp thấy rõ toàn thân, đủ sáng, không để người khác hoặc đồ vật che khuất. AI không thể bảo đảm giữ nguyên tuyệt đối từng chi tiết trong mọi bức ảnh.</p>
+        <span>✧</span><p><strong>Mẹo để ảnh tự nhiên hơn:</strong> nên chụp thấy rõ toàn thân, đủ sáng, người cách nền một khoảng, không để người khác hoặc đồ vật che khuất. AI không thể bảo đảm giữ nguyên tuyệt đối từng chi tiết trong mọi bức ảnh.</p>
       </div>
     </section>
 
     <section class="steps">
       <div><b>01</b><span><strong>Chụp một lần</strong><small>Không cần tài khoản</small></span></div>
-      <div><b>02</b><span><strong>AI tự tạo nền</strong><small>Không phải chọn phong cảnh</small></span></div>
+      <div><b>02</b><span><strong>AI tự tạo nền</strong><small>Ảnh gốc ở trên máy</small></span></div>
       <div><b>03</b><span><strong>Tải ảnh về</strong><small>Không lưu trên website</small></span></div>
     </section>
 
     <footer>
       <strong>CHI ĐOÀN TRƯỜNG TIỂU HỌC MINH KHƯƠNG</strong>
       <span>Công trình thanh niên ứng dụng chuyển đổi số và trí tuệ nhân tạo.</span>
-      <small>Ảnh được chuyển tới nhà cung cấp AI để xử lý; không được lưu thành thư viện tại website. Vui lòng đọc thông báo xử lý ảnh trước khi sử dụng.</small>
-      <small class="credits">Ảnh tham chiếu phong cảnh: Quang Nguyen Vinh và Q. Hưng Phạm / Pexels.</small>
+      <small>Ảnh gốc được xử lý trên điện thoại, không tải lên website. Cloudflare Workers AI chỉ nhận mô tả phong cảnh để tạo ảnh nền.</small>
+      <small class="credits">Mô hình tách người chạy trong trình duyệt: MediaPipe Selfie Segmentation. Mô hình tạo nền: FLUX.1 Schnell.</small>
     </footer>
   </main>
   <script src="/assets/app.js" defer></script>

@@ -21,48 +21,42 @@
 <main class="policy">
 <p class="kicker">CHI ĐOÀN TRƯỜNG TIỂU HỌC MINH KHƯƠNG</p>
 <h1>Thông tin xử lý ảnh — Dấu ấn Áo xanh</h1>
-<p>Website tạo ảnh check-in tự nguyện bằng cách dùng trí tuệ nhân tạo để tách chủ thể và tạo phông nền thiên nhiên. Đây là thông tin minh bạch về cách ảnh được xử lý trước khi người dùng đồng ý và chụp ảnh.</p>
+<p>Website tạo ảnh check-in tự nguyện bằng cách tách người ngay trên thiết bị, tạo một phong cảnh thiên nhiên bằng AI và ghép hai phần ảnh ngay trong trình duyệt.</p>
 
-<h2>1. Ảnh được xử lý như thế nào?</h2>
+<h2>1. Ảnh gốc được xử lý ở đâu?</h2>
 <ol>
-<li>Camera trên thiết bị tạo ảnh sau khi người dùng cấp quyền.</li>
-<li>Trình duyệt gửi ảnh qua kết nối HTTPS đến hàm xử lý của website trên Cloudflare.</li>
-<li>Hàm xử lý chuyển ảnh tới PhotoRoom Image Editing API để tách nền, tạo nền AI và hòa phối hình ảnh.</li>
-<li>Ảnh kết quả được truyền trực tiếp về trình duyệt để người dùng xem và tải xuống.</li>
+<li>Camera trên điện thoại tạo ảnh sau khi người dùng cấp quyền.</li>
+<li>Mô hình MediaPipe Selfie Segmentation chạy trong trình duyệt để nhận diện vùng người và tạo phần ảnh có nền trong suốt.</li>
+<li>Ảnh gốc và phần người đã tách không được tải lên máy chủ, không gửi tới dịch vụ AI bên ngoài.</li>
+<li>Trình duyệt chỉ gửi lựa chọn cảnh chung (ví dụ: ruộng lúa hoặc hồ núi) tới máy chủ Cloudflare để tạo một ảnh nền không chứa người.</li>
+<li>Ảnh nền được trả về điện thoại và ghép với phần người ngay trong trình duyệt. Người dùng xem và tự tải ảnh kết quả.</li>
 </ol>
-<p>Website không tạo tài khoản, không hỏi họ tên/số điện thoại, không lưu ảnh thành thư viện, không ghi ảnh vào cơ sở dữ liệu, KV, R2 hoặc ổ đĩa và không tự đăng ảnh lên mạng xã hội. Ảnh kết quả chỉ nằm tạm trong bộ nhớ trình duyệt khi trang còn mở; khi rời trang, đường dẫn ảnh tạm được giải phóng.</p>
+<p>Website không tạo tài khoản, không hỏi họ tên/số điện thoại, không lưu ảnh thành thư viện, không ghi ảnh vào database, KV, R2 hoặc ổ đĩa và không tự đăng ảnh lên mạng xã hội. Ảnh gốc, ảnh người đã tách và ảnh hoàn chỉnh chỉ nằm tạm trong bộ nhớ thiết bị khi trang còn mở.</p>
 
-<h2>2. Nhà cung cấp AI và dữ liệu chuyển ra nước ngoài</h2>
-<p>PhotoRoom là nhà cung cấp dịch vụ xử lý ảnh. Theo thông tin bảo mật do PhotoRoom công bố tại thời điểm xây dựng website:</p>
+<h2>2. Các dịch vụ kỹ thuật</h2>
 <ul>
-<li>Ảnh gửi qua API đồng bộ được xử lý trong thời gian thực và loại bỏ sau khi phản hồi.</li>
-<li>Hạ tầng của PhotoRoom được công bố tại Hoa Kỳ trên Google Cloud Platform và Amazon Web Services.</li>
-<li>Log vận hành được giữ 15 ngày; API access logs được giữ một năm.</li>
-<li>PhotoRoom công bố ảnh gửi qua API không được dùng để huấn luyện mô hình AI.</li>
+<li><strong>MediaPipe Selfie Segmentation:</strong> mô hình tải về trình duyệt từ CDN để chạy cục bộ. Việc tải mô hình không đồng nghĩa với việc gửi ảnh chụp lên nhà cung cấp.</li>
+<li><strong>Cloudflare Workers AI — FLUX.1 Schnell:</strong> chỉ nhận mô tả phong cảnh chung do website tạo sẵn, không nhận ảnh gốc hoặc ảnh người đã tách.</li>
+<li><strong>Cloudflare Workers:</strong> phục vụ website, API tạo phong cảnh và có thể xử lý dữ liệu kỹ thuật của yêu cầu như địa chỉ IP, thời điểm truy cập, trình duyệt và thông tin vận hành.</li>
 </ul>
-<p>Cloudflare cung cấp dịch vụ lưu trữ website, xử lý yêu cầu API và xác thực chống lạm dụng bằng Turnstile. Để xác thực, Cloudflare có thể xử lý địa chỉ IP, hostname, thông tin trình duyệt/thiết bị và tín hiệu bảo mật của phiên truy cập. Nhà trường cần rà soát điều khoản, vị trí xử lý và danh sách nhà thầu phụ hiện hành của cả hai nhà cung cấp.</p>
-<p>Nguồn: <a href="https://www.photoroom.com/platform/security" target="_blank" rel="noopener">PhotoRoom — Data Security & Privacy</a>.</p>
+<p>Hạn mức AI miễn phí của Cloudflare hiện là 10.000 Neurons mỗi ngày cho toàn bộ tài khoản Workers AI. Khi hết hạn mức, yêu cầu tạo nền có thể tạm thời không thực hiện được cho tới khi hạn mức được làm mới. Website không tự chuyển sang gói trả phí.</p>
 
-<h2>3. Lựa chọn và quyền của người trong ảnh</h2>
+<h2>3. Quyền của người trong ảnh</h2>
 <ul>
-<li>Chỉ chụp và gửi ảnh khi người trong ảnh đã được thông báo và có căn cứ đồng ý hợp lệ.</li>
-<li>Người dùng có thể từ chối cấp quyền camera, không tiếp tục hoặc đóng trang.</li>
-<li>Không dùng ảnh của người khác khi chưa có quyền hoặc sự đồng ý hợp lệ.</li>
-<li>Không dùng ảnh học sinh trước khi nhà trường hoàn tất việc xác định căn cứ xử lý, thông báo cho cha mẹ/người đại diện theo pháp luật và lấy chấp thuận cần thiết; đồng thời phải lắng nghe, tôn trọng ý kiến của học sinh theo độ tuổi và quy định áp dụng.</li>
-<li>Website không lưu bằng chứng đồng ý hoặc hồ sơ học sinh; vì vậy, nhà trường cần có quy trình lấy và lưu chấp thuận riêng trước khi bật chế độ sử dụng ảnh học sinh.</li>
-<li>Website không lưu ảnh thành thư viện, nhưng Cloudflare Turnstile xử lý một số tín hiệu kỹ thuật để ngăn lạm dụng; nhà trường cần đọc thông tin quyền riêng tư của Cloudflare khi phê duyệt nhà cung cấp.</li>
+<li>Chỉ chụp và sử dụng ảnh của chính mình hoặc ảnh đã được người trong ảnh cho phép.</li>
+<li>Người dùng có thể không cấp quyền camera, không tiếp tục hoặc đóng trang.</li>
+<li>Không dùng ảnh học sinh trước khi nhà trường hoàn tất việc xác định căn cứ xử lý, thông báo cho cha mẹ/người đại diện theo pháp luật và lấy chấp thuận cần thiết; phải tôn trọng ý kiến của học sinh theo độ tuổi và quy định áp dụng.</li>
+<li>Website không lưu bằng chứng đồng ý hoặc hồ sơ học sinh; nhà trường cần có quy trình lấy và lưu chấp thuận riêng nếu tổ chức hoạt động có học sinh tham gia.</li>
 </ul>
 
-<h2>4. Giai đoạn thử nghiệm và vận hành</h2>
-<p><strong>Giai đoạn thử nghiệm:</strong> Chỉ dùng ảnh của chính người trưởng thành đã đọc thông báo và đồng ý. Không thử với ảnh học sinh.</p>
-<p><strong>Vận hành tại trường:</strong> Chỉ bật chế độ dành cho nhà trường sau khi nhà trường phê duyệt mục đích, căn cứ xử lý, nội dung thông báo, chấp thuận, chuyển dữ liệu ra nước ngoài, nhà cung cấp xử lý, thời hạn lưu giữ/log và đầu mối tiếp nhận yêu cầu của chủ thể dữ liệu.</p>
+<h2>4. Giới hạn chất lượng</h2>
+<p>Mô hình tách người chạy trên điện thoại có thể xử lý chưa chính xác ở tóc bay, trang phục gần màu nền, nền quá rối, người bị che khuất hoặc ảnh thiếu sáng. Mô hình tạo phong cảnh tạo một ảnh nền chung, không phân tích ảnh gốc để điều chỉnh chính xác mọi chi tiết ánh sáng. Hệ thống tự thêm bóng và điều chỉnh tông màu ở mức nhẹ; vì vậy không thể bảo đảm kết quả giống ảnh chụp tại địa điểm thật trong mọi trường hợp.</p>
 
-<h2>5. Văn bản cần rà soát</h2>
-<ul>
-<li><a href="https://vanban.chinhphu.vn/?classid=1&docid=214590&pageid=27160&typegroup=" target="_blank" rel="noopener">Luật Bảo vệ dữ liệu cá nhân số 91/2025/QH15</a>, hiệu lực từ 01/01/2026.</li>
-<li><a href="https://chinhphu.vn/?classid=1&docid=216387&orggroupid=2&pageid=27160" target="_blank" rel="noopener">Nghị định 356/2025/NĐ-CP</a>, hiệu lực từ 01/01/2026.</li>
-</ul>
-<p class="warning">Tài liệu này là thông báo mẫu kỹ thuật, không phải kết luận tuân thủ pháp luật hay tư vấn pháp lý. Nhà trường cần rà soát và phê duyệt nội dung trước khi công khai mã QR.</p>
+<h2>5. Hạn mức và chi phí</h2>
+<p>Website sử dụng Workers AI trong hạn mức miễn phí hiện có của Cloudflare. Theo tài liệu giá được kiểm tra ngày 04/11/2026, hạn mức này là 10.000 Neurons/ngày. Khi đạt hạn mức, hệ thống báo tạm hết lượt thay vì tự phát sinh thanh toán. Hạn mức áp dụng chung cho tài khoản, có thể thay đổi theo chính sách của nhà cung cấp.</p>
+<p>Nguồn: <a href="https://developers.cloudflare.com/workers-ai/platform/pricing/" target="_blank" rel="noopener">Cloudflare Workers AI — Pricing</a>; <a href="https://developers.google.com/edge/mediapipe/solutions/vision/image_segmenter" target="_blank" rel="noopener">Google MediaPipe — Image Segmentation</a>.</p>
+
+<p class="warning">Tài liệu này mô tả luồng kỹ thuật hiện tại, không phải kết luận tuân thủ pháp luật hay tư vấn pháp lý. Nhà trường cần rà soát và phê duyệt nội dung trước khi công khai mã QR, đặc biệt khi hoạt động có ảnh học sinh.</p>
 <a class="back" href="/">← Quay lại trang check-in</a>
 </main>
 </body>
