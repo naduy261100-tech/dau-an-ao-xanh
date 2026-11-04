@@ -252,8 +252,13 @@
       throw new Error(message);
     }
     const blob = await response.blob();
-    if (!blob.type.startsWith("image/")) throw new Error("AI không trả về ảnh nền hợp lệ.");
-    return createImageBitmap(blob);
+    if (!blob.type.startsWith("image/")) throw new Error("Không nhận được ảnh nền hợp lệ.");
+    const bitmap = await createImageBitmap(blob);
+    return {
+      bitmap,
+      source: response.headers.get("x-background-source") || "flux-ai",
+      attribution: response.headers.get("x-background-attribution") || ""
+    };
   }
 
   function compositeImage(background, person) {
@@ -331,7 +336,7 @@
       el.processingTitle.textContent = "AI đang sáng tạo phong cảnh Tuyên Quang…";
       backgroundBitmap = await generateBackground(scene);
       el.processingTitle.textContent = "Đang hòa phối ánh sáng và ghép ảnh…";
-      const output = await compositeImage(backgroundBitmap, person);
+      const output = await compositeImage(backgroundBitmap.bitmap, person);
 
       if (resultUrl) URL.revokeObjectURL(resultUrl);
       resultUrl = URL.createObjectURL(output);
@@ -340,7 +345,12 @@
       el.resultBadge.hidden = false;
       el.resultControls.hidden = false;
       el.processingPanel.hidden = true;
-      notice("Ảnh đã hoàn thành. Bạn có thể tải ảnh về điện thoại.", "ready");
+      if (backgroundBitmap.source === "photo-fallback") {
+        const credit = backgroundBitmap.attribution ? " Ảnh phong cảnh: " + backgroundBitmap.attribution + "." : "";
+        notice("Đã ghép xong: AI tách người và phối ảnh trên điện thoại; nền là ảnh phong cảnh thật vì mô hình tạo nền đang bận." + credit, "ready");
+      } else {
+        notice("Ảnh đã được AI tạo nền và ghép hoàn chỉnh. Bạn có thể tải ảnh về điện thoại.", "ready");
+      }
     } catch (err) {
       el.processingPanel.hidden = true;
       el.startControls.hidden = false;
@@ -349,7 +359,7 @@
       showError(err instanceof Error ? err.message : "Có lỗi khi xử lý ảnh. Vui lòng thử lại.");
       await checkService();
     } finally {
-      if (backgroundBitmap && typeof backgroundBitmap.close === "function") backgroundBitmap.close();
+      if (backgroundBitmap?.bitmap && typeof backgroundBitmap.bitmap.close === "function") backgroundBitmap.bitmap.close();
       processing = false;
       el.captureBtn.disabled = false;
       updateStartState();

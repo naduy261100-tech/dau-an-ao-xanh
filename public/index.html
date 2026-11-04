@@ -70,7 +70,7 @@
       <div class="processing" id="processingPanel" hidden>
         <div class="spinner"></div>
         <strong id="processingTitle">AI đang tạo phong cảnh cho bạn…</strong>
-        <span>Ảnh gốc được tách người ngay trên điện thoại. AI chỉ tạo nền thiên nhiên; ảnh cuối cùng được ghép trên thiết bị.</span>
+        <span>Ảnh gốc được tách người ngay trên điện thoại. AI tạo nền; nếu AI đang bận, hệ thống tự dùng ảnh phong cảnh thật để bạn vẫn nhận được ảnh hoàn chỉnh.</span>
       </div>
 
       <div class="controls result-controls" id="resultControls" hidden>
@@ -93,8 +93,8 @@
     <footer>
       <strong>CHI ĐOÀN TRƯỜNG TIỂU HỌC MINH KHƯƠNG</strong>
       <span>Công trình thanh niên ứng dụng chuyển đổi số và trí tuệ nhân tạo.</span>
-      <small>Ảnh gốc được xử lý trên điện thoại, không tải lên website. Cloudflare Workers AI chỉ nhận mô tả phong cảnh để tạo ảnh nền.</small>
-      <small class="credits">Mô hình tách người chạy trong trình duyệt: MediaPipe Selfie Segmentation. Mô hình tạo nền: FLUX.1 Schnell.</small>
+      <small>Ảnh gốc được xử lý trên điện thoại, không tải lên website. Cloudflare Workers AI chỉ nhận lựa chọn phong cảnh chung, không nhận ảnh của bạn.</small>
+      <small class="credits">Tách người: MediaPipe Selfie Segmentation. Tạo nền AI: FLUX.1 Schnell. Ảnh dự phòng thật từ Pexels khi AI tạm bận.</small>
     </footer>
   </main>
   <script src="/assets/app.js" defer></script>

@@ -9,20 +9,34 @@ jobs:
     if: startsWith(github.event.head_commit.message, '[smoke-ai]')
     runs-on: ubuntu-latest
     steps:
-      - name: Generate one generic Tuyen Quang background using free Workers AI
+      - name: Allow Cloudflare deployment from main to finish
+        run: sleep 150
+      - name: Verify one no-person-image background request
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error \
+          STATUS="$(curl --silent --show-error \
             -X POST "https://dau-an-ao-xanh.naduy261100.workers.dev/api/background" \
             -H "Content-Type: application/json" \
             --data '{"scene":"rice"}' \
-            --output "$RUNNER_TEMP/ai-background.jpg" \
-            --write-out "HTTP_STATUS=%{http_code}\n"
+            -D "$RUNNER_TEMP/ai-headers.txt" \
+            -o "$RUNNER_TEMP/ai-background.jpg" \
+            -w "%{http_code}")"
+          echo "HTTP_STATUS=$STATUS"
+          if [ "$STATUS" != "200" ]; then
+            cat "$RUNNER_TEMP/ai-background.jpg"
+            exit 1
+          fi
           MIME="$(file --brief --mime-type "$RUNNER_TEMP/ai-background.jpg")"
           SIZE="$(wc -c < "$RUNNER_TEMP/ai-background.jpg")"
+          SOURCE="$(grep -i '^x-background-source:' "$RUNNER_TEMP/ai-headers.txt" | tail -1 | tr -d '\r' | awk -F': ' '{print $2}')"
           echo "CONTENT_TYPE=$MIME"
+          echo "BACKGROUND_SOURCE=$SOURCE"
           echo "IMAGE_BYTES=$SIZE"
           test "$MIME" = "image/jpeg"
           test "$SIZE" -gt 10000
-          echo "PASS: Workers AI returned a non-empty JPEG background."
+          case "$SOURCE" in
+            flux-ai|photo-fallback) ;;
+            *) echo "Missing or unknown background source"; exit 1 ;;
+          esac
+          echo "PASS: The app returned a usable background without uploading any personal photo."
