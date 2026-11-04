@@ -111,7 +111,7 @@
     el.aiConsentRow.hidden = !ai;
     if (ai) {
       el.privacyReminder.textContent = "Ảnh đang được gửi tới Cloudflare AI để chỉnh sửa theo chấp thuận của bạn. Chế độ này dùng hạn mức miễn phí hằng ngày.";
-      el.modeDisclaimer.textContent = "Ảnh gốc được gửi tới Cloudflare AI để chỉnh sửa bằng mô hình FLUX.2 Klein 4B. Miễn phí trong hạn mức 10.000 neurons/ngày của tài khoản; khi hết hạn mức, yêu cầu sẽ tạm dừng, không tự chuyển sang dịch vụ tính phí.";
+      el.modeDisclaimer.textContent = "Ảnh gốc được gửi tới Cloudflare AI để chỉnh sửa bằng mô hình FLUX.2 Klein 4B. Miễn phí, dự kiến khoảng 50 lượt/ngày ở kích thước hiện tại. Hạn mức 10.000 neurons/ngày dùng chung với các tác vụ AI khác; khi hết hạn mức, yêu cầu sẽ dừng và không tự chuyển sang dịch vụ tính phí.";
       el.privacyTitle.textContent = "AI chỉnh ảnh qua Cloudflare (hạn mức miễn phí)";
       el.privacyMessage.textContent = "Ảnh chụp được gửi tới máy chủ Cloudflare và mô hình FLUX.2 Klein 4B của Black Forest Labs để ghép chỉnh sửa với ảnh phong cảnh đã chọn. Mô hình được Cloudflare đánh dấu Zero Data Retention; ứng dụng không ghi ảnh vào thư viện hoặc cơ sở dữ liệu.";
       el.agreeButton.innerHTML = 'MỞ CAMERA & DÙNG AI MIỄN PHÍ <span aria-hidden="true">→</span>';
