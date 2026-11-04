@@ -9,7 +9,7 @@ const SECURITY_HEADERS = {
   "X-Frame-Options": "DENY",
   "X-Robots-Tag": "noindex, nofollow",
   "Cache-Control": "no-store",
-  "Content-Security-Policy": "default-src 'self'; img-src 'self' blob: data: https://insonnguyen.vn https://images.pexels.com; media-src 'self' blob:; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com https://huggingface.co https://cdn-lfs.huggingface.co https://cas-bridge.xethub.hf.co; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+  "Content-Security-Policy": "default-src 'self'; img-src 'self' blob: data: https://insonnguyen.vn https://images.pexels.com; media-src 'self' blob:; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; connect-src 'self' https://cdn.jsdelivr.net https://storage.googleapis.com https://huggingface.co https://cdn-lfs.huggingface.co https://cas-bridge.xethub.hf.co https://cdn.katana.video; worker-src 'self' blob: https://cdn.jsdelivr.net; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 };
 
 function secure(response) {
