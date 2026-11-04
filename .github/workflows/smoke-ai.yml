@@ -1,4 +1,4 @@
-name: One-shot free AI smoke test
+name: Check all selected photo backgrounds
 
 on:
   push:
@@ -11,32 +11,38 @@ jobs:
     steps:
       - name: Allow Cloudflare deployment from main to finish
         run: sleep 150
-      - name: Verify one no-person-image background request
+      - name: Check every background option without uploading a person photo
         shell: bash
         run: |
           set -euo pipefail
-          STATUS="$(curl --silent --show-error \
-            -X POST "https://dau-an-ao-xanh.naduy261100.workers.dev/api/background" \
-            -H "Content-Type: application/json" \
-            --data '{"scene":"rice"}' \
-            -D "$RUNNER_TEMP/ai-headers.txt" \
-            -o "$RUNNER_TEMP/ai-background.jpg" \
-            -w "%{http_code}")"
-          echo "HTTP_STATUS=$STATUS"
-          if [ "$STATUS" != "200" ]; then
-            cat "$RUNNER_TEMP/ai-background.jpg"
-            exit 1
-          fi
-          MIME="$(file --brief --mime-type "$RUNNER_TEMP/ai-background.jpg")"
-          SIZE="$(wc -c < "$RUNNER_TEMP/ai-background.jpg")"
-          SOURCE="$(grep -i '^x-background-source:' "$RUNNER_TEMP/ai-headers.txt" | tail -1 | tr -d '\r' | awk -F': ' '{print $2}')"
-          echo "CONTENT_TYPE=$MIME"
-          echo "BACKGROUND_SOURCE=$SOURCE"
-          echo "IMAGE_BYTES=$SIZE"
-          test "$MIME" = "image/jpeg"
-          test "$SIZE" -gt 10000
-          case "$SOURCE" in
-            flux-ai|photo-fallback) ;;
-            *) echo "Missing or unknown background source"; exit 1 ;;
-          esac
-          echo "PASS: The app returned a usable background without uploading any personal photo."
+          scenes=(rice-gold rice-green rice-path mountain-lake mist-lake waterfall forest-stream)
+          index=0
+          for scene in "${scenes[@]}"; do
+            index=$((index + 1))
+            output="$RUNNER_TEMP/background-$scene.jpg"
+            headers="$RUNNER_TEMP/background-$scene-headers.txt"
+            STATUS="$(curl --silent --show-error \
+              -X POST "https://dau-an-ao-xanh.naduy261100.workers.dev/api/background" \
+              -H "Content-Type: application/json" \
+              --data "{\"scene\":\"$scene\"}" \
+              -D "$headers" \
+              -o "$output" \
+              -w "%{http_code}")"
+            echo "SCENE=$scene HTTP_STATUS=$STATUS"
+            if [ "$STATUS" != "200" ]; then
+              cat "$output"
+              exit 1
+            fi
+            MIME="$(file --brief --mime-type "$output")"
+            SIZE="$(wc -c < "$output")"
+            SOURCE="$(grep -i '^x-background-source:' "$headers" | tail -1 | tr -d '\r' | awk -F': ' '{print $2}')"
+            TITLE="$(grep -i '^x-background-title:' "$headers" | tail -1 | tr -d '\r' | cut -d':' -f2- | sed 's/^ //')"
+            echo "CONTENT_TYPE=$MIME BYTES=$SIZE SOURCE=$SOURCE TITLE=$TITLE"
+            test "$MIME" = "image/jpeg"
+            test "$SIZE" -gt 10000
+            case "$SOURCE" in
+              flux-ai|photo-fallback) ;;
+              *) echo "Missing or unknown background source"; exit 1 ;;
+            esac
+          done
+          echo "PASS: All seven background choices returned a usable image without uploading any personal photo."
