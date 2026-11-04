@@ -548,7 +548,7 @@
     stopCamera();
     consentAccepted = false;
     el.consentCheck.checked = false;
-    el.agreeButton.disabled = !serviceReady;
+    el.agreeButton.disabled = !el.consentCheck.checked || !serviceReady;
     showScreen("consent");
     clearError();
   });
