@@ -433,6 +433,7 @@
       const scene = SCENES[selectedScene];
       el.resultDescription.textContent = "Người trong ảnh được lấy trực tiếp từ ảnh gốc; ứng dụng chỉ tách nền và ghép phong cảnh, không dùng AI tạo sinh để vẽ lại khuôn mặt.";
       el.resultMeta.textContent = "Phông nền: " + scene.title + " · Ảnh xuất: 1600 × 2000 px · Giữ nguyên khuôn mặt" + (background.attribution ? " · Ảnh nền: " + background.attribution : "");
+      el.downloadHelp.textContent = "Ảnh JPEG 1600 × 2000 px. Khuôn mặt được giữ từ ảnh gốc, không bị AI tạo sinh vẽ lại.";
       setProgress(100, "HOÀN TẤT", "Bức ảnh đã sẵn sàng!", "Bạn có thể tải ảnh về hoặc chụp lại bằng camera điện thoại.");
       await delay(300);
       showScreen("result");
