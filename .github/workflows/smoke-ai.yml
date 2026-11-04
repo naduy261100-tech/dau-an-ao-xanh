@@ -46,3 +46,46 @@ jobs:
             esac
           done
           echo "PASS: All seven background choices returned a usable image without uploading any personal photo."
+
+      - name: Smoke test free FLUX.2 Klein image editing with a public sample portrait
+        shell: bash
+        run: |
+          set -euo pipefail
+          sample="$RUNNER_TEMP/public-test-person.jpg"
+          request="$RUNNER_TEMP/ai-edit-request.json"
+          output="$RUNNER_TEMP/ai-edit-result.jpg"
+          headers="$RUNNER_TEMP/ai-edit-headers.txt"
+
+          curl --fail --silent --show-error --location \
+            "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=400&h=500&fit=crop" \
+            -o "$sample"
+          test "$(file --brief --mime-type "$sample")" = "image/jpeg"
+
+          image_base64="$(base64 -w 0 "$sample")"
+          jq -n \
+            --arg scene "rice-gold" \
+            --arg image "$image_base64" \
+            '{scene:$scene,imageBase64:$image,mimeType:"image/jpeg",consent:true}' > "$request"
+
+          STATUS="$(curl --silent --show-error \
+            -X POST "https://dau-an-ao-xanh.naduy261100.workers.dev/api/ai-edit" \
+            -H "Content-Type: application/json" \
+            --data-binary "@$request" \
+            -D "$headers" \
+            -o "$output" \
+            -w "%{http_code}")"
+
+          echo "AI_EDIT_HTTP_STATUS=$STATUS"
+          if [ "$STATUS" != "200" ]; then
+            cat "$output"
+            exit 1
+          fi
+          MIME="$(file --brief --mime-type "$output")"
+          SIZE="$(wc -c < "$output")"
+          MODEL="$(grep -i '^x-image-edit-model:' "$headers" | tail -1 | tr -d '\r' | awk -F': ' '{print $2}')"
+          echo "AI_EDIT_CONTENT_TYPE=$MIME BYTES=$SIZE MODEL=$MODEL"
+          test "$MIME" = "image/jpeg"
+          test "$SIZE" -gt 10000
+          test "$MODEL" = "FLUX.2-Klein-4B"
+          echo "PASS: Free FLUX.2 Klein AI returned an edited photograph using a public test image; no personal photo was used."
+
