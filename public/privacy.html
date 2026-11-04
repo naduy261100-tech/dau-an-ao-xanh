@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
 <title>Thông tin xử lý ảnh | Dấu ấn Áo xanh</title>
-<link rel="stylesheet" href="/assets/styles.css?v=20261104-ai-edit-mode">
+<link rel="stylesheet" href="/assets/styles.css?v=20261104-free-klein">
 <style>
 .policy{max-width:760px;margin:22px auto;padding:clamp(20px,5vw,34px);background:#fff;border:1px solid #e3ebe5;border-radius:18px;box-shadow:0 18px 50px rgba(20,47,34,.07)}
 .policy-kicker{color:#08794f;font-size:10px;font-weight:850;letter-spacing:.13em}
@@ -22,7 +22,7 @@
 <main class="policy">
 <p class="policy-kicker">CHI ĐOÀN TRƯỜNG TIỂU HỌC MINH KHƯƠNG</p>
 <h1>Thông tin xử lý ảnh và quyền riêng tư</h1>
-<p>Ứng dụng có hai chế độ xử lý ảnh riêng biệt. Người dùng tự chọn chế độ trước khi mở camera. Chế độ AI tải ảnh lên chỉ được thực hiện sau khi người dùng tick ô chấp thuận riêng.</p>
+<p>Ứng dụng có hai chế độ xử lý ảnh riêng biệt. Người dùng tự chọn chế độ trước khi mở camera. Chế độ gửi ảnh lên AI chỉ được thực hiện sau khi người dùng tick ô chấp thuận riêng.</p>
 
 <h2>1. Chế độ riêng tư trên điện thoại</h2>
 <ol>
@@ -34,19 +34,21 @@
 </ol>
 <p>Ở chế độ này, ảnh cá nhân chỉ nằm tạm trong bộ nhớ thiết bị khi trang còn mở. Website không lưu ảnh vào tài khoản, thư viện, cơ sở dữ liệu, KV, R2 hoặc ổ đĩa.</p>
 
-<h2>2. Chế độ AI chỉnh sửa ảnh</h2>
+<h2>2. Chế độ AI phối cảnh (miễn phí trong hạn mức)</h2>
 <ol>
-<li>Người dùng phải chọn chế độ “AI chỉnh ảnh chân thực hơn”, xác nhận quyền sử dụng ảnh và tick ô chấp thuận riêng việc gửi ảnh.</li>
-<li>Ảnh được nén trên thiết bị rồi gửi qua kết nối HTTPS tới máy chủ Cloudflare của ứng dụng.</li>
-<li>Máy chủ chuyển ảnh đầu vào và mô tả bối cảnh đã chọn tới mô hình FLUX.1 Kontext Pro do Black Forest Labs cung cấp qua Cloudflare AI để chỉnh sửa ảnh.</li>
-<li>Ảnh kết quả được trả về trình duyệt. Ứng dụng không lưu ảnh đầu vào hoặc ảnh đầu ra vào thư viện, cơ sở dữ liệu, KV, R2 hoặc ổ đĩa của website.</li>
+<li>Người dùng phải chọn chế độ “AI phối cảnh chân thực hơn”, xác nhận quyền sử dụng ảnh và tick ô chấp thuận riêng việc gửi ảnh.</li>
+<li>Ảnh được thu nhỏ trên thiết bị để phù hợp giới hạn ảnh tham chiếu của mô hình rồi gửi qua HTTPS tới máy chủ Cloudflare của ứng dụng.</li>
+<li>Máy chủ tải ảnh phong cảnh đã chọn từ thư viện Pexels, sau đó gửi ảnh phong cảnh và ảnh người làm hai ảnh tham chiếu tới mô hình FLUX.2 Klein 4B thông qua Cloudflare Workers AI.</li>
+<li>Mô hình kết hợp chủ thể với cảnh, tạo lại bố cục, ánh sáng và phối cảnh rồi trả ảnh kết quả về trình duyệt.</li>
+<li>Ứng dụng không lưu ảnh đầu vào hoặc ảnh đầu ra vào thư viện, cơ sở dữ liệu, KV, R2 hoặc ổ đĩa của website.</li>
 </ol>
-<p>Chế độ này có gửi ảnh cá nhân tới nhà cung cấp AI bên ngoài để xử lý. Việc xử lý, lưu giữ tạm thời và các điều kiện dữ liệu của dịch vụ AI bên ngoài chịu sự điều chỉnh bởi chính sách và điều khoản của các nhà cung cấp đó. Ứng dụng không cam kết rằng nhà cung cấp mô hình không lưu giữ dữ liệu xử lý. Không sử dụng chế độ này nếu người trong ảnh/người đại diện không chấp thuận việc chuyển ảnh tới dịch vụ bên ngoài.</p>
-<p>Chế độ AI có chi phí dự kiến khoảng <strong>0,04 USD cho mỗi ảnh đầu ra</strong> theo mức giá mô hình được Cloudflare công bố tại thời điểm cập nhật tài liệu. Mức giá có thể thay đổi; chi phí được tính vào tài khoản vận hành ứng dụng.</p>
-<p>Mô hình AI có thể làm thay đổi một số chi tiết khuôn mặt, tóc, trang phục, tư thế hoặc hình thể dù đã được hướng dẫn giữ nguyên người trong ảnh. Hãy kiểm tra kết quả trước khi tải xuống hoặc chia sẻ. Lựa chọn bối cảnh là mô tả để AI tạo lại phong cảnh, không bảo đảm tái tạo chính xác ảnh thumbnail.</p>
+<p><strong>Hạn mức:</strong> Cloudflare Workers AI cấp 10.000 neurons miễn phí mỗi ngày cho tài khoản Workers Free. Mô hình FLUX.2 Klein 4B tính mức sử dụng theo số ô ảnh đầu vào/đầu ra; với kích thước tham chiếu và đầu ra hiện tại, một ảnh ước tính khoảng 115 neurons. 50 lượt trong một ngày có thể dùng khoảng 5.750 neurons. Đây là ước tính, lượng thực tế có thể thay đổi theo kích thước xử lý, số lần thử và mức sử dụng AI khác trên cùng tài khoản. Hạn mức làm mới theo ngày UTC.</p>
+<p>Khi tài khoản hết hạn mức miễn phí, yêu cầu AI sẽ bị từ chối và ứng dụng không tự chuyển sang mô hình trả phí. Người dùng có thể chuyển sang chế độ riêng tư trên điện thoại hoặc thử lại sau khi hạn mức được làm mới.</p>
+<p>Cloudflare đánh dấu mô hình FLUX.2 Klein 4B có trạng thái Zero Data Retention (ZDR). Ứng dụng không ghi ảnh cá nhân vào kho lưu trữ của mình; quá trình truyền và xử lý vẫn diễn ra qua hạ tầng Cloudflare AI và đối tác mô hình theo tài liệu dịch vụ của họ.</p>
+<p>Mô hình có thể làm thay đổi một số chi tiết khuôn mặt, tóc, trang phục, tư thế hoặc hình thể dù đã được hướng dẫn giữ nguyên người trong ảnh. Kết quả không được đảm bảo giống hoàn toàn ảnh gốc. Hãy kiểm tra khuôn mặt và các chi tiết trước khi tải xuống hoặc chia sẻ.</p>
 
 <h2>3. Phông nền và nguồn ảnh</h2>
-<p>Ở chế độ riêng tư, thư viện sử dụng ảnh phong cảnh chụp thật từ Pexels; thông tin tác giả được hiển thị khi có. Ở chế độ AI, mô hình tạo/chỉnh sửa bối cảnh theo mô tả cảnh được chọn và không nhất thiết sử dụng nguyên trạng ảnh thumbnail.</p>
+<p>Thư viện phong cảnh gồm ảnh chụp thật được lấy từ Pexels. Ở chế độ riêng tư, ảnh nền được ghép nguyên trạng. Ở chế độ AI, ảnh phong cảnh được dùng làm ảnh tham chiếu để mô hình tái tạo và hòa phối; kết quả có thể không giống hoàn toàn thumbnail.</p>
 
 <h2>4. Quyền của người trong ảnh</h2>
 <ul>
