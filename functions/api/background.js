@@ -176,13 +176,21 @@ export async function onRequestPost({ request, env }) {
     compositionPrompt,
     lighting,
     "Do not include any people, human silhouettes, faces, statues, mannequins, animals, signs, letters, captions, logos, borders or watermarks. Water is background scenery only and must never occupy the standing area.",
-    "The result must look like a genuine high-quality travel photograph, not CGI, painting, collage or fantasy art."
+    "Photographic truth is mandatory: it must look like an unretouched real travel photograph captured on location by a professional documentary photographer, not an illustration, not concept art, not an architectural visualization, not a 3D render, not a painting, not plastic-looking AI art. Use realistic imperfect natural details, plausible optics, fine real-world textures, natural contrast and restrained saturation."
   ].join(" ");
 
   try {
-    const result = await env.AI.run("@cf/black-forest-labs/flux-1-schnell", {
-      prompt,
-      steps: 8
+    const form = new FormData();
+    form.set("prompt", prompt);
+    form.set("width", "1024");
+    form.set("height", "1280");
+    form.set("seed", String(seed));
+    const serialized = new Response(form);
+    const result = await env.AI.run("@cf/black-forest-labs/flux-2-klein-4b", {
+      multipart: {
+        body: serialized.body,
+        contentType: serialized.headers.get("content-type")
+      }
     });
     if (!result || typeof result.image !== "string" || !result.image) {
       throw new Error("model-returned-no-image");
@@ -202,7 +210,7 @@ export async function onRequestPost({ request, env }) {
         "x-background-attribution": "",
         "x-background-title": selected.title,
         "x-background-seed": String(seed),
-        "x-background-model": "FLUX.1-Schnell",
+        "x-background-model": "FLUX.2-Klein-4B",
         "content-disposition": "inline; filename=\"dau-an-ao-xanh-ai-background.jpg\""
       }
     });

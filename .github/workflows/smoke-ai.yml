@@ -52,8 +52,8 @@ jobs:
           test "$MIME" = "image/jpeg"
           test "$SIZE" -gt 10000
           test "$SOURCE" = "flux-ai"
-          test "$MODEL" = "FLUX.1-Schnell"
-          echo "PASS: FLUX.1 Schnell generated a fresh background; no personal photo was uploaded."
+          test "$MODEL" = "FLUX.2-Klein-4B"
+          echo "PASS: FLUX.2 Klein 4B generated a fresh high-detail background; no personal photo was uploaded."
 
       - name: Save AI background sample for visual review
         uses: actions/upload-artifact@v4
