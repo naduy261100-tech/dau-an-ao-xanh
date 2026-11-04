@@ -2,64 +2,64 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#153f34">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
 <title>Thông tin xử lý ảnh | Dấu ấn Áo xanh</title>
-<link rel="stylesheet" href="/assets/styles.css">
+<link rel="stylesheet" href="/assets/styles.css?v=20261104-camera-flow">
 <style>
-.policy{max-width:760px;margin:24px auto;padding:24px;background:#fff;border:1px solid #e2eae2;border-radius:20px;box-shadow:0 20px 60px rgba(18,55,42,.08)}
-.policy h1{color:#153f34;font:700 30px Georgia,serif}
-.policy h2{margin-top:25px;color:#24553f;font-size:17px}
-.policy p,.policy li{color:#52665a;font-size:14px;line-height:1.7}
-.policy a{color:#216c4b}
-.policy .warning{padding:12px;border-radius:12px;background:#fff7e9;color:#765d2c}
-.back{display:inline-block;margin-top:15px;padding:11px 15px;border-radius:10px;background:#184c3a;color:white;text-decoration:none;font-weight:700}
+.policy{max-width:760px;margin:22px auto;padding:clamp(20px,5vw,34px);background:#fff;border:1px solid #e3ebe5;border-radius:18px;box-shadow:0 18px 50px rgba(20,47,34,.07)}
+.policy .policy-kicker{color:#08794f;font-size:10px;font-weight:850;letter-spacing:.13em}
+.policy h1{margin:8px 0 12px;color:#193b2d;font-size:clamp(25px,5vw,34px);line-height:1.2;letter-spacing:-.04em}
+.policy h2{margin:25px 0 8px;color:#20523a;font-size:16px}
+.policy p,.policy li{color:#607067;font-size:13px;line-height:1.75}
+.policy ul,.policy ol{padding-left:22px}
+.policy a{color:#08794f}
+.policy .warning{padding:13px 15px;border:1px solid #f0e7cf;border-radius:11px;background:#fffcf5;color:#79643c}
+.back{display:inline-flex;align-items:center;gap:8px;margin-top:15px;padding:12px 16px;border-radius:10px;background:#08794f;color:white!important;text-decoration:none;font-size:12px;font-weight:800}
 </style>
 </head>
 <body>
-<div class="top-strip"></div>
 <main class="policy">
-<p class="kicker">CHI ĐOÀN TRƯỜNG TIỂU HỌC MINH KHƯƠNG</p>
-<h1>Thông tin xử lý ảnh — Dấu ấn Áo xanh</h1>
-<p>Website tạo ảnh check-in tự nguyện bằng cách tách người ngay trên thiết bị, tạo một phong cảnh thiên nhiên bằng AI và ghép hai phần ảnh ngay trong trình duyệt.</p>
+<p class="policy-kicker">CHI ĐOÀN TRƯỜNG TIỂU HỌC MINH KHƯƠNG</p>
+<h1>Thông tin xử lý ảnh và quyền riêng tư</h1>
+<p>Dấu ấn Áo xanh là trải nghiệm check-in tự nguyện. Người dùng xác nhận quyền sử dụng ảnh, mở camera, chụp ảnh, chờ hệ thống tách chủ thể và phối ghép với phong cảnh, sau đó tải ảnh về hoặc chụp lại.</p>
 
 <h2>1. Ảnh gốc được xử lý ở đâu?</h2>
 <ol>
 <li>Camera trên điện thoại tạo ảnh sau khi người dùng cấp quyền.</li>
-<li>Mô hình MediaPipe Selfie Segmentation chạy trong trình duyệt để nhận diện vùng người và tạo phần ảnh có nền trong suốt.</li>
+<li>Mô hình MediaPipe Selfie Segmentation chạy trong trình duyệt để nhận diện người và tạo phần ảnh nền trong suốt.</li>
 <li>Ảnh gốc và phần người đã tách không được tải lên máy chủ, không gửi tới dịch vụ AI bên ngoài.</li>
-<li>Trình duyệt chỉ gửi lựa chọn cảnh chung (ví dụ: ruộng lúa hoặc hồ núi) tới Cloudflare Workers AI để tạo một ảnh nền không chứa người.</li>
-<li>Nếu mô hình AI tạm thời quá tải hoặc hết hạn mức miễn phí, website tải một ảnh phong cảnh thật từ Pexels làm nền dự phòng; ảnh người vẫn ở trên điện thoại.</li>
-<li>Ảnh nền được trả về điện thoại và ghép với phần người ngay trong trình duyệt. Người dùng xem và tự tải ảnh kết quả.</li>
+<li>Trình duyệt chỉ gửi yêu cầu tạo phong cảnh chung tới Cloudflare Workers AI; yêu cầu không kèm ảnh gốc hoặc ảnh người đã tách.</li>
+<li>Nếu mô hình AI tạm thời quá tải hoặc hết hạn mức miễn phí, website lấy một ảnh phong cảnh thật làm nền dự phòng.</li>
+<li>Ảnh người và ảnh nền được căn chỉnh kích thước, phối màu và ghép ngay trong trình duyệt trên thiết bị. Người dùng tự chọn tải ảnh về hoặc chụp lại.</li>
 </ol>
 <p>Website không tạo tài khoản, không hỏi họ tên/số điện thoại, không lưu ảnh thành thư viện, không ghi ảnh vào database, KV, R2 hoặc ổ đĩa và không tự đăng ảnh lên mạng xã hội. Ảnh gốc, ảnh người đã tách và ảnh hoàn chỉnh chỉ nằm tạm trong bộ nhớ thiết bị khi trang còn mở.</p>
 
 <h2>2. Các dịch vụ kỹ thuật</h2>
 <ul>
 <li><strong>MediaPipe Selfie Segmentation:</strong> mô hình tải về trình duyệt từ CDN để chạy cục bộ. Việc tải mô hình không đồng nghĩa với việc gửi ảnh chụp lên nhà cung cấp.</li>
-<li><strong>Cloudflare Workers AI — FLUX.1 Schnell:</strong> chỉ nhận lựa chọn và mô tả phong cảnh chung do website tạo sẵn, không nhận ảnh gốc hoặc ảnh người đã tách.</li>
-<li><strong>Pexels:</strong> khi mô hình AI tạm bận hoặc hết hạn mức miễn phí, Worker tải một ảnh phong cảnh thật đã công bố trên Pexels để làm nền dự phòng. Không có ảnh của người dùng được gửi đến Pexels.</li>
-<li><strong>Cloudflare Workers:</strong> phục vụ website, API tạo phong cảnh và có thể xử lý dữ liệu kỹ thuật của yêu cầu như địa chỉ IP, thời điểm truy cập, trình duyệt và thông tin vận hành.</li>
+<li><strong>Cloudflare Workers AI — FLUX.1 Schnell:</strong> nhận mô tả phong cảnh chung do website tạo sẵn, không nhận ảnh gốc hoặc ảnh người đã tách.</li>
+<li><strong>Pexels:</strong> khi mô hình AI tạm bận hoặc hết hạn mức miễn phí, Worker tải ảnh phong cảnh thật được công bố theo giấy phép Pexels làm nền dự phòng. Không có ảnh của người dùng được gửi đến Pexels.</li>
+<li><strong>Cloudflare Workers:</strong> phục vụ website và API tạo phong cảnh; có thể xử lý dữ liệu kỹ thuật của yêu cầu như địa chỉ IP, thời điểm truy cập, trình duyệt và thông tin vận hành.</li>
 </ul>
-<p>Hạn mức AI miễn phí của Cloudflare hiện là 10.000 Neurons mỗi ngày cho toàn bộ tài khoản Workers AI. Khi hết hạn mức, yêu cầu tạo nền có thể tạm thời không thực hiện được cho tới khi hạn mức được làm mới. Website không tự chuyển sang gói trả phí.</p>
+<p>Hạn mức AI miễn phí của Cloudflare áp dụng chung cho tài khoản Workers AI. Khi hết hạn mức, yêu cầu tạo nền có thể tạm thời chuyển sang ảnh dự phòng cho tới khi hạn mức được làm mới. Website không tự chuyển sang gói trả phí.</p>
 
 <h2>3. Quyền của người trong ảnh</h2>
 <ul>
-<li>Chỉ chụp và sử dụng ảnh của chính mình hoặc ảnh đã được người trong ảnh cho phép.</li>
-<li>Người dùng có thể không cấp quyền camera, không tiếp tục hoặc đóng trang.</li>
-<li>Không dùng ảnh học sinh trước khi nhà trường hoàn tất việc xác định căn cứ xử lý, thông báo cho cha mẹ/người đại diện theo pháp luật và lấy chấp thuận cần thiết; phải tôn trọng ý kiến của học sinh theo độ tuổi và quy định áp dụng.</li>
+<li>Chỉ chụp và sử dụng ảnh của chính mình hoặc ảnh đã được người trong ảnh/người đại diện cho phép.</li>
+<li>Người dùng có thể không đồng ý, không cấp quyền camera hoặc đóng trang bất cứ lúc nào.</li>
+<li>Không sử dụng ảnh học sinh trước khi nhà trường hoàn tất việc xác định căn cứ xử lý, thông báo cho cha mẹ/người đại diện theo pháp luật và lấy chấp thuận cần thiết; phải tôn trọng ý kiến của học sinh theo độ tuổi và quy định áp dụng.</li>
 <li>Website không lưu bằng chứng đồng ý hoặc hồ sơ học sinh; nhà trường cần có quy trình lấy và lưu chấp thuận riêng nếu tổ chức hoạt động có học sinh tham gia.</li>
 </ul>
 
-<h2>4. Giới hạn chất lượng</h2>
-<p>Mô hình tách người chạy trên điện thoại có thể xử lý chưa chính xác ở tóc bay, trang phục gần màu nền, nền quá rối, người bị che khuất hoặc ảnh thiếu sáng. Mô hình tạo phong cảnh tạo một ảnh nền chung, không phân tích ảnh gốc để điều chỉnh chính xác mọi chi tiết ánh sáng. Nếu mô hình bận, hệ thống dùng ảnh phong cảnh thật từ Pexels. Hệ thống tự thêm bóng và điều chỉnh tông màu ở mức nhẹ; vì vậy không thể bảo đảm kết quả giống ảnh chụp tại địa điểm thật trong mọi trường hợp.</p>
+<h2>4. Chất lượng ảnh ghép</h2>
+<p>Ảnh cuối được tạo bằng cách tách người trên thiết bị rồi đặt lên phong cảnh. Hệ thống có căn chỉnh tỷ lệ, thêm bóng tiếp xúc và điều chỉnh tông màu ở mức nhẹ. Kết quả có thể chưa hoàn toàn tự nhiên ở tóc bay, trang phục gần màu nền, người bị che khuất, ảnh thiếu sáng hoặc khi hướng sáng của ảnh gốc khác với phong cảnh. Đây là ghép ảnh kỹ thuật số, không phải ảnh chụp thực tế tại địa điểm.</p>
 
-<h2>5. Hạn mức và chi phí</h2>
-<p>Website sử dụng Workers AI trong hạn mức miễn phí hiện có của Cloudflare. Theo tài liệu giá được kiểm tra ngày 04/11/2026, hạn mức này là 10.000 Neurons/ngày. Khi đạt hạn mức, hệ thống báo tạm hết lượt thay vì tự phát sinh thanh toán. Hạn mức áp dụng chung cho tài khoản, có thể thay đổi theo chính sách của nhà cung cấp.</p>
-<p>Nguồn: <a href="https://developers.cloudflare.com/workers-ai/platform/pricing/" target="_blank" rel="noopener">Cloudflare Workers AI — Pricing</a>; <a href="https://developers.google.com/edge/mediapipe/solutions/vision/image_segmenter" target="_blank" rel="noopener">Google MediaPipe — Image Segmentation</a>.</p>
+<h2>5. Tải ảnh và lưu trữ</h2>
+<p>Nút “Tải ảnh về” tạo tệp ảnh ngay trên thiết bị. Trên iPhone/iPad, trình duyệt có thể mở bảng chia sẻ để người dùng chọn “Lưu hình ảnh”; trên Android và máy tính, trình duyệt sẽ tải tệp về. Người dùng cần tự kiểm tra thư mục Tải xuống hoặc Ảnh sau thao tác.</p>
 
-<p class="warning">Tài liệu này mô tả luồng kỹ thuật hiện tại, không phải kết luận tuân thủ pháp luật hay tư vấn pháp lý. Nhà trường cần rà soát và phê duyệt nội dung trước khi công khai mã QR, đặc biệt khi hoạt động có ảnh học sinh.</p>
-<a class="back" href="/">← Quay lại trang check-in</a>
+<p class="warning">Tài liệu này mô tả luồng kỹ thuật hiện tại, không phải kết luận tuân thủ pháp luật hay tư vấn pháp lý. Nhà trường cần rà soát và phê duyệt nội dung trước khi công khai mã QR, đặc biệt khi hoạt động có ảnh học sinh tham gia.</p>
+<a class="back" href="/">← Quay lại check-in</a>
 </main>
 </body>
 </html>
