@@ -1,5 +1,5 @@
 const WINDOW_MS = 60 * 1000;
-const MAX_REQUESTS_PER_WINDOW = 8;
+const MAX_REQUESTS_PER_WINDOW = 25;
 const requestCounts = new Map();
 const MODEL = "@cf/black-forest-labs/flux-2-klein-4b";
 const MAX_IMAGE_BASE64_LENGTH = 1_500_000;
