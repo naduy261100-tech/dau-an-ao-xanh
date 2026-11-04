@@ -15,7 +15,7 @@ Công trình thanh niên của Chi đoàn Trường Tiểu học Minh Khương.
 - Thung lũng ruộng xanh
 - Lối nhỏ giữa ruộng
 - Hồ núi xanh
-- Hồ sương sớm
+- Hồ núi giữa rừng
 - Thác giữa rừng
 - Suối rừng xanh
 
