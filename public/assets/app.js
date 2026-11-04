@@ -40,7 +40,7 @@
     "rice-green": { title: "Thung lũng ruộng xanh", author: "Duc Nguyen" },
     "rice-path": { title: "Lối nhỏ giữa ruộng", author: "Ahmet Yüksek" },
     "mountain-lake": { title: "Hồ núi xanh", author: "Quang Nguyen Vinh" },
-    "mist-lake": { title: "Hồ sương sớm", author: "Linh Tran" },
+    "mist-lake": { title: "Hồ núi giữa rừng", author: "Red Nguyen" },
     "waterfall": { title: "Thác giữa rừng", author: "Pexels" },
     "forest-stream": { title: "Suối rừng xanh", author: "Ella Ragasa" }
   };
@@ -110,11 +110,11 @@
     const ai = mode === "ai";
     el.aiConsentRow.hidden = !ai;
     if (ai) {
-      el.privacyReminder.textContent = "Ảnh đang được gửi tới Cloudflare AI và Black Forest Labs theo chấp thuận của bạn.";
-      el.modeDisclaimer.textContent = "Ảnh gốc sẽ được gửi qua Cloudflare AI đến Black Forest Labs để chỉnh sửa. Mô hình có thể thay đổi một số chi tiết; hãy kiểm tra kết quả trước khi tải về.";
-      el.privacyTitle.textContent = "Chế độ AI gửi ảnh lên dịch vụ bên ngoài";
-      el.privacyMessage.textContent = "Ảnh chụp được gửi từ điện thoại tới máy chủ Cloudflare và mô hình FLUX.1 Kontext Pro của Black Forest Labs để tạo ảnh chỉnh sửa. Website không lưu ảnh vào thư viện hoặc cơ sở dữ liệu; việc xử lý dữ liệu tại nhà cung cấp tuân theo chính sách của họ.";
-      el.agreeButton.innerHTML = 'ĐỒNG Ý & GỬI ẢNH TỚI AI <span aria-hidden="true">→</span>';
+      el.privacyReminder.textContent = "Ảnh đang được gửi tới Cloudflare AI để chỉnh sửa theo chấp thuận của bạn. Chế độ này dùng hạn mức miễn phí hằng ngày.";
+      el.modeDisclaimer.textContent = "Ảnh gốc được gửi tới Cloudflare AI để chỉnh sửa bằng mô hình FLUX.2 Klein 4B. Miễn phí trong hạn mức 10.000 neurons/ngày của tài khoản; khi hết hạn mức, yêu cầu sẽ tạm dừng, không tự chuyển sang dịch vụ tính phí.";
+      el.privacyTitle.textContent = "AI chỉnh ảnh qua Cloudflare (hạn mức miễn phí)";
+      el.privacyMessage.textContent = "Ảnh chụp được gửi tới máy chủ Cloudflare và mô hình FLUX.2 Klein 4B của Black Forest Labs để ghép chỉnh sửa với ảnh phong cảnh đã chọn. Mô hình được Cloudflare đánh dấu Zero Data Retention; ứng dụng không ghi ảnh vào thư viện hoặc cơ sở dữ liệu.";
+      el.agreeButton.innerHTML = 'MỞ CAMERA & DÙNG AI MIỄN PHÍ <span aria-hidden="true">→</span>';
     } else {
       el.privacyReminder.textContent = "Ảnh gốc không rời khỏi thiết bị của bạn.";
       el.modeDisclaimer.textContent = "Chế độ riêng tư xử lý toàn bộ ảnh trên điện thoại; kết quả ghép vẫn có thể chưa hoàn toàn tự nhiên.";
@@ -479,7 +479,7 @@
         throw new Error("Ảnh quá lớn để gửi tới AI. Vui lòng chụp lại với độ phân giải thấp hơn.");
       }
 
-      setProgress(32, "ĐANG GỬI ẢNH ĐÃ ĐƯỢC CHẤP THUẬN", "AI đang tiếp nhận ảnh…", "Ảnh gốc được gửi tới Cloudflare AI và mô hình chỉnh sửa của Black Forest Labs.");
+      setProgress(32, "ĐANG GỬI ẢNH ĐÃ ĐƯỢC CHẤP THUẬN", "AI đang tiếp nhận ảnh…", "Ảnh gốc được gửi tới Cloudflare AI để chỉnh sửa bằng FLUX.2 Klein 4B trong hạn mức miễn phí hằng ngày.");
       const response = await fetch("/api/ai-edit", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -502,8 +502,8 @@
       resultUrl = URL.createObjectURL(output);
       el.resultImage.src = resultUrl;
       el.resultDescription.textContent = "AI đã chỉnh sửa trực tiếp ảnh gốc và tạo lại bối cảnh theo lựa chọn. Hãy kiểm tra kỹ khuôn mặt, trang phục và các chi tiết trước khi tải ảnh.";
-      el.resultMeta.textContent = "Chế độ AI · FLUX.1 Kontext Pro · Phông nền: " + SCENES[selectedScene].title;
-      setProgress(100, "HOÀN TẤT", "Ảnh AI đã sẵn sàng!", "Bạn có thể tải ảnh về hoặc chụp lại. Mỗi lượt tạo ảnh có chi phí theo giá hiển thị trước khi chụp.");
+      el.resultMeta.textContent = "AI miễn phí · FLUX.2 Klein 4B · Phông nền: " + SCENES[selectedScene].title;
+      setProgress(100, "HOÀN TẤT", "Ảnh AI đã sẵn sàng!", "Bạn có thể tải ảnh về hoặc chụp lại. AI dùng hạn mức miễn phí hằng ngày; khi hết hạn mức, hãy thử lại vào ngày hôm sau.");
       await delay(350);
       showScreen("result");
     } catch (error) {
