@@ -371,7 +371,10 @@
       if (hairIndex < 0) hairIndex = 1;
       const hairMask = masks[hairIndex];
       if (hairMask) {
-        hairValues = hairMask.getAsFloat32Array();
+        // Copy mask data before closing MediaPipe's result object; some
+        // runtimes release the WASM-backed view when confidenceMasks are closed.
+        const hairData = hairMask.getAsFloat32Array();
+        hairValues = hairData ? new Float32Array(hairData) : null;
         hairWidth = hairMask.width;
         hairHeight = hairMask.height;
         hairRefined = Boolean(hairValues?.length && hairWidth && hairHeight);
