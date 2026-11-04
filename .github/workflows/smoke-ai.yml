@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Allow Cloudflare deployment from main to finish
-        run: sleep 150
+        run: sleep 20
       - name: Check every background option without uploading a person photo
         shell: bash
         run: |
