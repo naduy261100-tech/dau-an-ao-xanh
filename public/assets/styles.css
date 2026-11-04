@@ -92,6 +92,10 @@ button,input { font: inherit; } button { -webkit-tap-highlight-color: transparen
 .button-secondary { border:1px solid #dce8df; background:#f6faf7; color:#315943; }
 .agree-button { width:100%; margin-top:12px; }
 .agree-button span { margin-left:auto; font-size:17px; }
+.upload-photo-button,.reprocess-button,.choose-scene-button { width:100%; margin-top:9px; }
+.saved-photo-notice { margin:10px 4px 0; padding:10px 12px; border:1px solid #dcebe0; border-radius:10px; background:#f5faf6; color:#466550; font-size:10px; line-height:1.55; }
+.choose-scene-button { margin-top:10px; }
+.camera-open-card .button-secondary { width:100%; margin-top:8px; }
 .consent-footnote { margin:9px 2px 0; color:#998b6c; font-size:9px; line-height:1.5; text-align:center; }
 .camera-screen { display:grid; place-items:center; min-height:52vh; padding:35px 15px; }
 .camera-open-card { width:min(100%,430px); padding:28px 22px; border:1px solid var(--line); border-radius:17px; background:#fff; box-shadow:var(--shadow); text-align:center; }
