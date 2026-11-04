@@ -4,16 +4,11 @@ const requestCounts = new Map();
 
 const PROMPTS = {
   rice: [
-    "Photorealistic documentary travel photograph of the green rice terraces and forested mountain landscape of Tuyen Quang, northern Vietnam.",
-    "Vertical portrait composition, natural 35mm camera perspective at human eye level, broad unobstructed open grassy-earth foreground in the lower 40 percent, with a believable flat natural ground plane where a single standing visitor could be composited.",
-    "Layered lush rice fields, distant forested limestone mountain ridges, subtle atmospheric haze, realistic leaf and soil textures, soft late-morning daylight from the upper left, neutral-warm natural color temperature, realistic shadows, crisp but not oversharpened detail.",
-    "The center of the lower foreground must remain clear and empty. No people, no animals, no buildings, no vehicles, no objects, no signs, no text, no logos, no watermark, no fantasy, no illustration, no artificial HDR, no oversaturation."
-  ].join(" "),
-  lake: [
-    "Photorealistic documentary travel photograph of a peaceful mountain lake and forested limestone peaks in Tuyen Quang, northern Vietnam.",
-    "Vertical portrait composition, natural 35mm camera perspective at human eye level, a clean natural shoreline or open grassy-earth clearing across the lower 40 percent, with a believable ground plane suitable for a standing visitor.",
-    "Calm lake in the middle distance, layered green limestone mountains, soft early-morning mist, natural vegetation, realistic soil and grass texture, diffuse daylight with a consistent soft direction from upper left, neutral natural colors, realistic atmospheric depth and camera exposure.",
-    "Keep the center of the lower foreground completely open and empty. No people, no animals, no buildings, no vehicles, no boats, no objects, no signs, no text, no logos, no watermark, no fantasy, no illustration, no oversaturation."
+    "Create a highly photorealistic travel photograph of Hồng Thái, Tuyên Quang, northern Vietnam, captured by a professional documentary photographer with a full-frame camera and a natural 35mm lens.",
+    "Vertical 4:5 portrait composition from human eye level, not aerial. Beautiful layered green terraced rice fields, distant forested limestone mountains, subtle morning haze and a soft pale-blue sky.",
+    "The most important requirement is a realistic open walking path or firm grassy-earth terrace edge entering from the bottom center and leading naturally toward the middle distance. Keep a clear, level, believable standing area in the lower center foreground so a visitor can be composited there at true human scale.",
+    "Natural late-morning light, realistic shadows falling gently to the right, neutral white balance, subtle atmospheric depth, detailed rice leaves and soil, authentic northern Vietnamese landscape, editorial travel photography, not a painting or illustration.",
+    "No people, no animals, no houses, no cars, no boats, no signs, no text, no lettering, no logos, no watermark, no fantasy, no artificial HDR, no over-saturation, no exaggerated clarity."
   ].join(" ")
 };
 
@@ -21,10 +16,6 @@ const PHOTO_FALLBACKS = {
   rice: {
     url: "https://images.pexels.com/photos/29127885/pexels-photo-29127885.jpeg?auto=compress&cs=tinysrgb&w=1800",
     attribution: "Q. Hưng Phạm / Pexels"
-  },
-  lake: {
-    url: "https://images.pexels.com/photos/2166695/pexels-photo-2166695.jpeg?auto=compress&cs=tinysrgb&w=1800",
-    attribution: "Quang Nguyen Vinh / Pexels"
   }
 };
 
@@ -52,9 +43,9 @@ function rateLimited(request) {
 }
 
 async function photoFallback(scene) {
-  const fallback = PHOTO_FALLBACKS[scene];
+  const fallback = PHOTO_FALLBACKS[scene] || PHOTO_FALLBACKS.rice;
   const response = await fetch(fallback.url, {
-    headers: { "user-agent": "DauAnAoXanh-Checkin/1.0" },
+    headers: { "user-agent": "DauAnAoXanh-Checkin/2.0" },
     signal: AbortSignal.timeout(15000)
   });
   if (!response.ok || !response.headers.get("content-type")?.startsWith("image/")) {
@@ -66,11 +57,11 @@ async function photoFallback(scene) {
     status: 200,
     headers: {
       "content-type": response.headers.get("content-type") || "image/jpeg",
-      "cache-control": "public, max-age=3600",
+      "cache-control": "no-store, private, max-age=0",
       "x-content-type-options": "nosniff",
       "x-background-source": "photo-fallback",
       "x-background-attribution": fallback.attribution,
-      "content-disposition": "inline; filename=\"tuyen-quang-real-landscape.jpg\""
+      "content-disposition": "inline; filename=\"hong-thai-tuyen-quang-background.jpg\""
     }
   });
 }
@@ -93,7 +84,7 @@ export async function onRequestPost({ request, env }) {
   } catch (_) {
     return json({ message: "Không đọc được yêu cầu tạo phong cảnh." }, 400);
   }
-  const scene = body && body.scene === "rice" ? "rice" : "lake";
+  const scene = "rice";
 
   try {
     const result = await env.AI.run("@cf/black-forest-labs/flux-1-schnell", {
@@ -117,7 +108,7 @@ export async function onRequestPost({ request, env }) {
         "cache-control": "no-store, private, max-age=0",
         "x-content-type-options": "nosniff",
         "x-background-source": "flux-ai",
-        "content-disposition": "inline; filename=\"tuyen-quang-ai-background.jpg\""
+        "content-disposition": "inline; filename=\"hong-thai-ai-background.jpg\""
       }
     });
   } catch (error) {
@@ -125,8 +116,8 @@ export async function onRequestPost({ request, env }) {
     console.error("Workers AI background generation failed:", detail.slice(0, 500));
 
     try {
-      // Keep the experience usable without charging: when the free AI model is at capacity
-      // or its daily allocation is reached, use a real, licensed Pexels landscape photograph.
+      // A real portrait photograph of Tuyen Quang is the no-cost fallback.
+      // The source photo is framed for a standing visitor, rather than a lake-only panorama.
       return await photoFallback(scene);
     } catch (fallbackError) {
       console.error("Real-photo background fallback failed:", fallbackError instanceof Error ? fallbackError.message : String(fallbackError));
