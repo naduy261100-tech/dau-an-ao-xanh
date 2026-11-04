@@ -5,139 +5,142 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#ffffff">
   <meta name="description" content="Dấu ấn Áo xanh — Check-in AI của Chi đoàn Trường Tiểu học Minh Khương.">
-  <title>Dấu ấn Áo xanh | Chi đoàn Trường Tiểu học Minh Khương</title>
-  <link rel="stylesheet" href="/assets/styles.css?v=20261104-youth-union">
+  <title>Dấu ấn Áo xanh | Check-in AI Minh Khương</title>
+  <link rel="stylesheet" href="/assets/styles.css?v=20261104-camera-flow">
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/selfie_segmentation.js" crossorigin="anonymous" defer></script>
 </head>
 <body>
-  <div class="top-accent" aria-hidden="true"></div>
-  <main class="shell">
-    <header class="site-header">
-      <a class="union-emblem" href="https://doanthanhnien.vn/gioi-thieu" target="_blank" rel="noopener noreferrer" aria-label="Tìm hiểu về Đoàn Thanh niên Cộng sản Hồ Chí Minh">
-        <img
-          src="https://cdn2.tuoitre.vn/zoom/700_700/tto/i/s626/2013/03/07/AupW0NRZ.jpg"
-          alt="Huy hiệu Đoàn Thanh niên Cộng sản Hồ Chí Minh"
-          width="112"
-          height="112"
-          fetchpriority="high">
-      </a>
-      <div class="brand-copy">
-        <div class="eyebrow"><span class="eyebrow-dot"></span>CÔNG TRÌNH THANH NIÊN</div>
+  <main class="app-shell">
+    <header class="app-header">
+      <div class="brand-mark">
+        <img src="https://cdn2.tuoitre.vn/zoom/700_700/tto/i/s626/2013/03/07/AupW0NRZ.jpg"
+             alt="Huy hiệu Đoàn Thanh niên Cộng sản Hồ Chí Minh" width="52" height="52">
+      </div>
+      <div class="brand-text">
+        <div class="brand-kicker">CÔNG TRÌNH THANH NIÊN</div>
         <h1>Dấu ấn <span>Áo xanh</span></h1>
-        <p class="school-name">Chi đoàn Trường Tiểu học Minh Khương</p>
-        <p class="tagline">Một khoảnh khắc của bạn – một dấu ấn tuổi trẻ.</p>
+        <p>Chi đoàn Trường Tiểu học Minh Khương</p>
       </div>
-      <div class="header-year" aria-label="Tuổi trẻ Minh Khương">
-        <span class="year-star">✦</span>
-        <strong>MINH<br>KHƯƠNG</strong>
-        <small>Tuổi trẻ</small>
-      </div>
+      <div class="brand-chip">MINH<br>KHƯƠNG</div>
     </header>
 
-    <div class="intro-heading">
-      <span class="intro-number">01</span>
-      <div>
-        <h2>Lưu giữ khoảnh khắc áo xanh</h2>
-        <p>Chụp ảnh, tách nền tự động và tạo nên bức hình check-in mang sắc màu Tuyên Quang.</p>
+    <section class="screen consent-screen" id="consentScreen">
+      <div class="welcome-art" aria-hidden="true">
+        <div class="welcome-orbit orbit-one"></div>
+        <div class="welcome-orbit orbit-two"></div>
+        <div class="welcome-mark">✦</div>
+        <div class="welcome-caption">MỘT KHOẢNH KHẮC · MỘT DẤU ẤN</div>
       </div>
-    </div>
+      <div class="consent-card">
+        <div class="section-eyebrow"><span class="live-dot"></span> CHECK-IN AI MINH KHƯƠNG</div>
+        <h2>Khoảnh khắc của bạn,<br><span>một sắc màu mới.</span></h2>
+        <p class="intro-copy">Chụp một bức ảnh, AI tự tách chủ thể và phối ghép với phong cảnh thiên nhiên. Không cần tài khoản, không đăng ảnh lên website.</p>
 
-    <section class="panel" aria-labelledby="checkinTitle">
-      <div class="panel-head">
+        <div class="privacy-panel">
+          <div class="privacy-icon" aria-hidden="true">⌑</div>
+          <div>
+            <strong>Ảnh được xử lý riêng tư</strong>
+            <p>Ảnh gốc và hình người được giữ trên điện thoại. Máy chủ chỉ tạo hoặc cung cấp ảnh phong cảnh nền.</p>
+            <a href="/privacy.html" target="_blank" rel="noopener">Tìm hiểu cách xử lý ảnh <span>↗</span></a>
+          </div>
+        </div>
+
+        <label class="consent-check" for="consentCheck">
+          <input type="checkbox" id="consentCheck">
+          <span class="custom-check" aria-hidden="true"></span>
+          <span class="consent-text" id="consentLabel">Tôi là người trong ảnh hoặc đã được người trong ảnh/người đại diện cho phép sử dụng ảnh này và đồng ý xử lý trên thiết bị.</span>
+        </label>
+        <button class="button button-primary agree-button" id="agreeButton" type="button" disabled>
+          ĐỒNG Ý & MỞ CAMERA <span aria-hidden="true">→</span>
+        </button>
+        <p class="consent-footnote">Với ảnh học sinh, chỉ tham gia khi nhà trường đã hoàn tất việc xin chấp thuận phù hợp.</p>
+      </div>
+    </section>
+
+    <section class="screen camera-screen" id="cameraScreen" hidden>
+      <div class="camera-heading">
+        <button class="icon-button" id="cameraBackBtn" type="button" aria-label="Quay lại">‹</button>
         <div>
-          <p class="kicker">TRẢI NGHIỆM CHECK-IN</p>
-          <h2 id="checkinTitle">Chụp ảnh và ghép phong cảnh</h2>
+          <strong>Chụp ảnh check-in</strong>
+          <span id="cameraLensLabel">CAMERA SAU</span>
         </div>
-        <span class="ai-label"><span>✦</span> HỖ TRỢ AI</span>
+        <button class="icon-button" id="switchBtn" type="button" aria-label="Đổi camera">↻</button>
       </div>
-
-      <div class="service-note" id="serviceNote" role="status" aria-live="polite">
-        <span class="status-dot"></span>
-        <span id="serviceText">Đang kiểm tra dịch vụ…</span>
-      </div>
-
-      <section class="consent" aria-label="Thông tin xử lý ảnh">
-        <div class="shield" aria-hidden="true">▣</div>
-        <div class="consent-body">
-          <strong>Quyền riêng tư và xử lý ảnh</strong>
-          <p id="consentDescription">Ảnh gốc được xử lý ngay trên điện thoại; không tải lên máy chủ.</p>
-          <p><a class="privacy-link" href="/privacy.html" target="_blank" rel="noopener">Xem thông tin xử lý ảnh và quyền riêng tư ↗</a></p>
-          <p class="small-note" id="consentWarning">Chỉ sử dụng ảnh khi người trong ảnh hoặc người đại diện đã cho phép.</p>
-          <label class="check-row">
-            <input type="checkbox" id="consentCheck">
-            <span id="consentLabel">Tôi là người trong ảnh hoặc đã được người trong ảnh/người đại diện cho phép sử dụng ảnh này.</span>
-          </label>
-        </div>
-      </section>
 
       <div class="camera-stage" id="cameraStage">
-        <div class="camera-placeholder" id="cameraPlaceholder">
-          <div class="camera-icon" aria-hidden="true">📷</div>
-          <strong>Sẵn sàng lưu lại khoảnh khắc?</strong>
-          <span>Đứng ở nơi đủ sáng, để máy ảnh nhìn rõ người và bấm nút mở camera bên dưới.</span>
-        </div>
-        <video id="cameraVideo" playsinline autoplay muted hidden></video>
-        <img id="resultImage" alt="Ảnh check-in đã được xử lý" hidden>
-        <div class="camera-badge" id="cameraBadge" hidden>CAMERA ĐANG HOẠT ĐỘNG</div>
-        <div class="camera-badge result-badge" id="resultBadge" hidden>ẢNH ĐÃ HOÀN THÀNH</div>
+        <video id="cameraVideo" playsinline autoplay muted></video>
+        <div class="camera-grid" aria-hidden="true"><i></i><i></i></div>
+        <div class="camera-focus" aria-hidden="true"></div>
+        <div class="camera-live-pill"><span></span> TRỰC TIẾP</div>
       </div>
 
-      <div class="controls" id="startControls">
-        <button class="btn primary" id="startBtn" disabled>📷 &nbsp; MỞ CAMERA SAU</button>
+      <div class="camera-toolbar">
+        <div class="camera-side-note">
+          <span class="camera-side-icon">✦</span>
+          <span>Giữ máy thẳng<br><small>Đứng cách camera 1–2 m</small></span>
+        </div>
+        <button class="shutter-button" id="captureBtn" type="button" aria-label="Chụp ảnh">
+          <span></span>
+        </button>
+        <div class="camera-side-note camera-side-note-right">
+          <span class="camera-side-icon">AI</span>
+          <span>Tự động<br><small>Tách người, ghép nền</small></span>
+        </div>
       </div>
-      <div class="controls native-camera-controls" id="nativeCaptureControls" hidden>
-        <button class="btn secondary" id="nativeCaptureBtn" type="button">MỞ CAMERA ĐIỆN THOẠI (DỰ PHÒNG)</button>
+
+      <div class="native-capture-fallback" id="nativeCaptureControls" hidden>
+        <p>Camera trực tiếp không khả dụng trên trình duyệt này.</p>
+        <button class="button button-secondary" id="nativeCaptureBtn" type="button">MỞ CAMERA CỦA ĐIỆN THOẠI</button>
       </div>
       <input id="nativeCameraInput" type="file" accept="image/*" capture="environment" hidden>
-      <div class="controls camera-controls" id="cameraControls" hidden>
-        <button class="btn secondary switch-btn" id="switchBtn" type="button" aria-label="Đổi camera">ĐỔI CAMERA</button>
-        <button class="btn primary" id="captureBtn" type="button">CHỤP ẢNH & GHÉP NỀN</button>
-      </div>
-
-      <div class="processing" id="processingPanel" hidden>
-        <div class="spinner" aria-hidden="true"></div>
-        <strong id="processingTitle">Đang xử lý ảnh của bạn…</strong>
-        <span>Ảnh gốc được tách người ngay trên điện thoại. Hệ thống tạo phong cảnh rồi ghép ảnh trên thiết bị; khi mô hình AI bận, ảnh phong cảnh thật sẽ được dùng làm nền dự phòng.</span>
-      </div>
-
-      <div class="controls result-controls" id="resultControls" hidden>
-        <button class="btn secondary" id="retakeBtn" type="button">CHỤP LẠI</button>
-        <button class="btn primary" id="downloadBtn" type="button">↓ TẢI ẢNH VỀ</button>
-      </div>
-      <div class="error-box" id="errorBox" role="alert" aria-live="polite" hidden></div>
-
-      <div class="tip">
-        <span aria-hidden="true">✦</span>
-        <p><strong>Để ảnh ghép tự nhiên hơn:</strong> hãy đứng cách nền một khoảng, chụp đủ sáng và để toàn thân trong khung hình. Kết quả tách nền có thể chưa hoàn hảo khi tóc, trang phục hoặc cơ thể bị che khuất.</p>
-      </div>
     </section>
 
-    <section class="steps" aria-label="Các bước thực hiện">
-      <div class="step-card">
-        <b>01</b>
-        <span><strong>Mở camera</strong><small>Không cần tạo tài khoản</small></span>
+    <section class="screen processing-screen" id="processingScreen" hidden>
+      <div class="processing-visual">
+        <div class="processing-ring"></div>
+        <div class="processing-spark">✦</div>
       </div>
-      <div class="step-card">
-        <b>02</b>
-        <span><strong>Tách người, ghép nền</strong><small>Thực hiện ngay trên điện thoại</small></span>
-      </div>
-      <div class="step-card">
-        <b>03</b>
-        <span><strong>Tải ảnh hoàn chỉnh</strong><small>Ảnh không lưu trên website</small></span>
-      </div>
+      <p class="section-eyebrow">DẤU ẤN ÁO XANH · AI STUDIO</p>
+      <h2 id="processingTitle">AI đang xử lý hình ảnh…</h2>
+      <p class="processing-copy" id="processingMessage">Đang nhận diện chủ thể và tách nền ngay trên điện thoại.</p>
+      <div class="progress-track"><span id="progressFill"></span></div>
+      <div class="progress-caption"><span id="progressLabel">ĐANG PHÂN TÍCH ẢNH</span><strong id="progressPercent">12%</strong></div>
+      <div class="privacy-reminder"><span>▣</span> Ảnh gốc không được tải lên máy chủ.</div>
     </section>
 
-    <footer class="site-footer">
-      <div class="footer-title">DẤU ẤN ÁO XANH · MINH KHƯƠNG</div>
-      <p class="footer-description">Công trình thanh niên ứng dụng chuyển đổi số và trí tuệ nhân tạo của Chi đoàn nhà trường.</p>
-      <div class="credits">
-        <span><strong>Tác giả:</strong> Chi Đoàn trường Tiểu học Minh Khương</span>
-        <span><strong>Admin:</strong> Nguyễn Anh Duy</span>
+    <section class="screen result-screen" id="resultScreen" hidden>
+      <div class="result-heading">
+        <div>
+          <p class="section-eyebrow"><span class="success-dot"></span> HOÀN TẤT</p>
+          <h2>Khoảnh khắc đã sẵn sàng!</h2>
+          <p id="resultDescription">Ảnh của bạn đã được tách người và phối ghép với phong cảnh.</p>
+        </div>
+        <div class="result-check">✓</div>
       </div>
-      <small>Ảnh gốc được xử lý trên điện thoại, không tải lên website. Máy chủ chỉ nhận mô tả phong cảnh chung để tạo nền.</small>
-      <small class="tech-credit">Tách người: MediaPipe Selfie Segmentation · Tạo nền: Cloudflare Workers AI · Ảnh dự phòng: Pexels</small>
+      <div class="result-frame">
+        <img id="resultImage" alt="Ảnh check-in đã được AI xử lý">
+        <div class="result-watermark">DẤU ẤN ÁO XANH · MINH KHƯƠNG</div>
+      </div>
+      <div class="result-actions">
+        <button class="button button-primary download-button" id="downloadBtn" type="button">
+          <span class="download-icon">↓</span> TẢI ẢNH VỀ
+        </button>
+        <button class="button button-secondary retake-button" id="retakeBtn" type="button">
+          <span>↻</span> CHỤP LẠI
+        </button>
+      </div>
+      <p class="download-help" id="downloadHelp">Ảnh được lưu trực tiếp về thiết bị của bạn.</p>
+    </section>
+
+    <div class="error-box" id="errorBox" role="alert" aria-live="polite" hidden></div>
+
+    <footer class="app-footer">
+      <span class="footer-brand">DẤU ẤN ÁO XANH <i>·</i> MINH KHƯƠNG</span>
+      <span><strong>Tác giả:</strong> Chi Đoàn trường Tiểu học Minh Khương</span>
+      <span><strong>Admin:</strong> Nguyễn Anh Duy</span>
+      <small>Ảnh gốc được xử lý trên thiết bị. Không lưu trữ ảnh cá nhân trên website.</small>
     </footer>
   </main>
-  <script src="/assets/app.js?v=20261104-youth-union" defer></script>
+  <script src="/assets/app.js?v=20261104-camera-flow" defer></script>
 </body>
 </html>
