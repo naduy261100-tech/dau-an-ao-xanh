@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
 <title>Thông tin xử lý ảnh | Dấu ấn Áo xanh</title>
-<link rel="stylesheet" href="/assets/styles.css?v=20261104-real-camera">
+<link rel="stylesheet" href="/assets/styles.css?v=20261104-ai-edit-mode">
 <style>
 .policy{max-width:760px;margin:22px auto;padding:clamp(20px,5vw,34px);background:#fff;border:1px solid #e3ebe5;border-radius:18px;box-shadow:0 18px 50px rgba(20,47,34,.07)}
 .policy-kicker{color:#08794f;font-size:10px;font-weight:850;letter-spacing:.13em}
@@ -22,30 +22,43 @@
 <main class="policy">
 <p class="policy-kicker">CHI ĐOÀN TRƯỜNG TIỂU HỌC MINH KHƯƠNG</p>
 <h1>Thông tin xử lý ảnh và quyền riêng tư</h1>
-<p>Người dùng chọn phông nền, xác nhận quyền sử dụng ảnh và mở camera chụp ảnh của điện thoại. Ảnh chụp được tách người trên thiết bị, sau đó ghép với phông nền đã chọn.</p>
-<h2>1. Ảnh cá nhân được xử lý ở đâu?</h2>
+<p>Ứng dụng có hai chế độ xử lý ảnh riêng biệt. Người dùng tự chọn chế độ trước khi mở camera. Chế độ AI tải ảnh lên chỉ được thực hiện sau khi người dùng tick ô chấp thuận riêng.</p>
+
+<h2>1. Chế độ riêng tư trên điện thoại</h2>
 <ol>
 <li>Camera hệ thống của điện thoại tạo ảnh sau khi người dùng cấp quyền.</li>
 <li>MediaPipe Selfie Segmentation chạy trong trình duyệt để nhận diện người và tạo vùng nền trong suốt.</li>
 <li>Ảnh gốc và phần người đã tách không được tải lên máy chủ, không gửi tới Pexels.</li>
-<li>Trình duyệt chỉ gửi mã phông nền chung đã chọn tới Cloudflare Workers AI. Yêu cầu không kèm ảnh chụp.</li>
-<li>Nếu mô hình tạo nền AI tạm bận hoặc không khả dụng, hệ thống sử dụng ảnh phong cảnh chụp thật từ Pexels.</li>
-<li>Ảnh người và phông nền được ghép trên thiết bị. Người dùng có thể tải ảnh về hoặc chụp lại.</li>
+<li>Trình duyệt chỉ gửi mã phông nền chung đã chọn tới máy chủ để nhận ảnh phong cảnh.</li>
+<li>Người và phong cảnh được ghép trên thiết bị bằng Canvas. Đây là ghép ảnh 2D, chưa phải tái dựng toàn bộ không gian bằng AI.</li>
 </ol>
-<p>Website không tạo tài khoản, không hỏi họ tên/số điện thoại, không lưu ảnh thành thư viện, không ghi ảnh vào database, KV, R2 hoặc ổ đĩa và không tự đăng ảnh lên mạng xã hội. Ảnh cá nhân chỉ nằm tạm trong bộ nhớ thiết bị khi trang còn mở.</p>
-<h2>2. Phông nền và nguồn ảnh</h2>
-<p>Thư viện phông nền gồm các ảnh phong cảnh chụp thật được cung cấp theo Pexels License. Tên phông nền và thông tin tác giả ảnh được hiển thị trong kết quả. Khi AI tạo được nền mới, ảnh đó là ảnh tạo sinh theo mô tả cảnh đã chọn; khi AI bận, ảnh chụp thật tương ứng được sử dụng.</p>
-<h2>3. Chất lượng ảnh ghép</h2>
-<p>Quy trình hiện tại tách chủ thể rồi ghép 2D vào một bối cảnh. Hệ thống có làm mềm viền, căn tỷ lệ, tạo bóng tiếp xúc và điều chỉnh sắc độ nhẹ. Kết quả có thể chưa hoàn toàn tự nhiên nếu hướng sáng, góc chụp hoặc mặt phẳng đứng của ảnh gốc khác với phông nền. Đây chưa phải kỹ thuật tái dựng toàn bộ không gian 3D hay chỉnh sửa ảnh AI dựa trên ảnh gốc.</p>
+<p>Ở chế độ này, ảnh cá nhân chỉ nằm tạm trong bộ nhớ thiết bị khi trang còn mở. Website không lưu ảnh vào tài khoản, thư viện, cơ sở dữ liệu, KV, R2 hoặc ổ đĩa.</p>
+
+<h2>2. Chế độ AI chỉnh sửa ảnh</h2>
+<ol>
+<li>Người dùng phải chọn chế độ “AI chỉnh ảnh chân thực hơn”, xác nhận quyền sử dụng ảnh và tick ô chấp thuận riêng việc gửi ảnh.</li>
+<li>Ảnh được nén trên thiết bị rồi gửi qua kết nối HTTPS tới máy chủ Cloudflare của ứng dụng.</li>
+<li>Máy chủ chuyển ảnh đầu vào và mô tả bối cảnh đã chọn tới mô hình FLUX.1 Kontext Pro do Black Forest Labs cung cấp qua Cloudflare AI để chỉnh sửa ảnh.</li>
+<li>Ảnh kết quả được trả về trình duyệt. Ứng dụng không lưu ảnh đầu vào hoặc ảnh đầu ra vào thư viện, cơ sở dữ liệu, KV, R2 hoặc ổ đĩa của website.</li>
+</ol>
+<p>Chế độ này có gửi ảnh cá nhân tới nhà cung cấp AI bên ngoài để xử lý. Việc xử lý, lưu giữ tạm thời và các điều kiện dữ liệu của dịch vụ AI bên ngoài chịu sự điều chỉnh bởi chính sách và điều khoản của các nhà cung cấp đó. Ứng dụng không cam kết rằng nhà cung cấp mô hình không lưu giữ dữ liệu xử lý. Không sử dụng chế độ này nếu người trong ảnh/người đại diện không chấp thuận việc chuyển ảnh tới dịch vụ bên ngoài.</p>
+<p>Chế độ AI có chi phí dự kiến khoảng <strong>0,04 USD cho mỗi ảnh đầu ra</strong> theo mức giá mô hình được Cloudflare công bố tại thời điểm cập nhật tài liệu. Mức giá có thể thay đổi; chi phí được tính vào tài khoản vận hành ứng dụng.</p>
+<p>Mô hình AI có thể làm thay đổi một số chi tiết khuôn mặt, tóc, trang phục, tư thế hoặc hình thể dù đã được hướng dẫn giữ nguyên người trong ảnh. Hãy kiểm tra kết quả trước khi tải xuống hoặc chia sẻ. Lựa chọn bối cảnh là mô tả để AI tạo lại phong cảnh, không bảo đảm tái tạo chính xác ảnh thumbnail.</p>
+
+<h2>3. Phông nền và nguồn ảnh</h2>
+<p>Ở chế độ riêng tư, thư viện sử dụng ảnh phong cảnh chụp thật từ Pexels; thông tin tác giả được hiển thị khi có. Ở chế độ AI, mô hình tạo/chỉnh sửa bối cảnh theo mô tả cảnh được chọn và không nhất thiết sử dụng nguyên trạng ảnh thumbnail.</p>
+
 <h2>4. Quyền của người trong ảnh</h2>
 <ul>
 <li>Chỉ chụp và sử dụng ảnh của chính mình hoặc ảnh đã được người trong ảnh/người đại diện cho phép.</li>
-<li>Người dùng có thể hủy thao tác hoặc đóng trang.</li>
-<li>Không sử dụng ảnh học sinh trước khi nhà trường hoàn tất việc xác định căn cứ xử lý, thông báo và lấy chấp thuận cần thiết từ cha mẹ/người đại diện theo pháp luật.</li>
+<li>Việc đồng ý sử dụng ảnh không tự động đồng nghĩa với việc đồng ý tải ảnh lên AI. Hai xác nhận được tách riêng.</li>
+<li>Với ảnh học sinh, chỉ sử dụng chế độ AI sau khi nhà trường xác định căn cứ xử lý, thông báo đầy đủ và có chấp thuận cần thiết của cha mẹ/người đại diện theo pháp luật.</li>
+<li>Người dùng có thể hủy thao tác hoặc chọn chế độ riêng tư không tải ảnh lên.</li>
 </ul>
+
 <h2>5. Lưu ảnh</h2>
 <p>Trên Android và máy tính, trình duyệt tải ảnh thành tệp JPEG. Trên iPhone/iPad, nút tải có thể mở bảng chia sẻ; người dùng chọn “Lưu hình ảnh” để lưu vào thiết bị.</p>
-<p class="warning">Tài liệu này mô tả luồng kỹ thuật hiện tại, không phải kết luận tuân thủ pháp luật hay tư vấn pháp lý. Nhà trường cần rà soát và phê duyệt trước khi công khai mã QR.</p>
+<p class="warning">Tài liệu này mô tả luồng kỹ thuật của ứng dụng, không phải kết luận tuân thủ pháp luật hay tư vấn pháp lý. Nhà trường cần rà soát và phê duyệt nội dung, phương án xin chấp thuận và việc sử dụng dịch vụ AI bên ngoài trước khi công khai mã QR, đặc biệt khi có ảnh học sinh.</p>
 <a class="back" href="/">← Quay lại check-in</a>
 </main>
 </body>
