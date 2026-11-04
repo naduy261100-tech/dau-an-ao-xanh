@@ -188,6 +188,12 @@
       el.cameraControls.hidden = false;
       el.switchBtn.textContent = actualFacing === "environment" ? "↻ CAMERA TRƯỚC" : "↻ CAMERA SAU";
     } catch (err) {
+      stopCamera();
+      el.cameraVideo.hidden = true;
+      el.cameraBadge.hidden = true;
+      el.cameraPlaceholder.hidden = false;
+      el.cameraControls.hidden = true;
+      el.startControls.hidden = false;
       const denied = err && (err.name === "NotAllowedError" || err.name === "PermissionDeniedError");
       el.nativeCaptureControls.hidden = false;
       showError(denied
