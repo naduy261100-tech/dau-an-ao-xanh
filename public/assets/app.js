@@ -10,8 +10,12 @@
     modeDisclaimer: $("modeDisclaimer"),
     privacyTitle: $("privacyTitle"),
     privacyMessage: $("privacyMessage"),
-    aiConsentRow: $("aiConsentRow"),
-    aiUploadConsent: $("aiUploadConsent"),
+    uploadPhotoBtn: $("uploadPhotoBtn"),
+    uploadPhotoCameraBtn: $("uploadPhotoCameraBtn"),
+    uploadPhotoInput: $("uploadPhotoInput"),
+    reprocessBtn: $("reprocessBtn"),
+    savedPhotoNotice: $("savedPhotoNotice"),
+    chooseSceneBtn: $("chooseSceneBtn"),
     cameraScreen: $("cameraScreen"),
     cameraStatusTitle: $("cameraStatusTitle"),
     cameraStatusText: $("cameraStatusText"),
@@ -50,7 +54,8 @@
   };
 
   let selectedScene = "rice-gold";
-  let selectedMode = "private";
+  let selectedMode = "ai-background";
+  let currentPhotoFile = null;
   let serviceReady = false;
   let consentAccepted = false;
   let processing = false;
@@ -96,36 +101,43 @@
     }
   }
 
+  function updateSavedPhotoControls() {
+    const hasPhoto = Boolean(currentPhotoFile);
+    el.savedPhotoNotice.hidden = !hasPhoto;
+    el.reprocessBtn.hidden = !hasPhoto;
+    if (hasPhoto) {
+      el.savedPhotoNotice.textContent = "Đã giữ ảnh " + (currentPhotoFile.name || "vừa chọn") + " trong phiên này. Chọn phong cảnh khác rồi ghép lại mà không cần chụp lại.";
+    }
+  }
+
   function updateAgreeButton() {
-    const generalConsent = Boolean(el.consentCheck.checked);
-    const aiConsent = selectedMode !== "ai" || Boolean(el.aiUploadConsent.checked);
-    el.agreeButton.disabled = !serviceReady || !generalConsent || !aiConsent;
+    const allowed = serviceReady && Boolean(el.consentCheck.checked);
+    el.agreeButton.disabled = !allowed;
+    el.uploadPhotoBtn.disabled = !allowed;
+    el.reprocessBtn.disabled = !allowed || !currentPhotoFile || processing;
+    updateSavedPhotoControls();
   }
 
   function selectMode(mode) {
-    if (mode !== "private" && mode !== "ai") return;
-    if (selectedMode !== mode && mode === "ai") el.aiUploadConsent.checked = false;
+    if (mode !== "ai-background" && mode !== "library") return;
     selectedMode = mode;
     for (const button of el.modeOptions) {
       const active = button.dataset.mode === mode;
       button.classList.toggle("is-selected", active);
       button.setAttribute("aria-pressed", active ? "true" : "false");
     }
-    const ai = mode === "ai";
-    el.aiConsentRow.hidden = !ai;
-    if (ai) {
-      el.privacyReminder.textContent = "Ảnh đang được gửi tới Cloudflare AI để chỉnh sửa theo chấp thuận của bạn. Chế độ này dùng hạn mức miễn phí hằng ngày.";
-      el.modeDisclaimer.textContent = "Chế độ AI sáng tạo gửi ảnh lên Cloudflare và vẽ lại toàn cảnh. Dù đã có hướng dẫn giữ nguyên người, mô hình vẫn có thể thay đổi khuôn mặt, tóc, trang phục hoặc chi tiết cơ thể. Không chọn chế độ này nếu cần giữ nguyên diện mạo.";
-      el.privacyTitle.textContent = "Ảnh được gửi tới Cloudflare AI";
-      el.privacyMessage.textContent = "FLUX.2 Klein 4B sẽ tái tạo ảnh người và bối cảnh. Khuôn mặt hoặc trang phục có thể khác ảnh gốc. Chỉ tiếp tục khi bạn chấp nhận khả năng thay đổi đó.";
-      el.agreeButton.innerHTML = 'MỞ CAMERA & DÙNG AI MIỄN PHÍ <span aria-hidden="true">→</span>';
+    if (mode === "ai-background") {
+      el.privacyReminder.textContent = "Ảnh người không rời khỏi thiết bị; chỉ câu lệnh tạo phong cảnh được gửi tới Cloudflare AI.";
+      el.modeDisclaimer.textContent = "Mỗi lượt ghép, AI tạo một phong cảnh mới theo chủ đề đã chọn. Người chụp được lấy trực tiếp từ ảnh gốc; AI không vẽ lại khuôn mặt.";
+      el.privacyTitle.textContent = "Nền AI tạo mới · giữ khuôn mặt gốc";
+      el.privacyMessage.textContent = "Máy chủ chỉ nhận mã chủ đề và câu lệnh tạo cảnh. Ảnh người được giữ trong trình duyệt và ghép trên điện thoại.";
     } else {
       el.privacyReminder.textContent = "Ảnh gốc không rời khỏi thiết bị của bạn.";
-      el.modeDisclaimer.textContent = "Chế độ giữ nguyên khuôn mặt xử lý ảnh ngay trên điện thoại. Người trong ảnh được lấy từ ảnh gốc, không bị mô hình tạo sinh vẽ lại; kết quả ghép có thể chưa tự nhiên tuyệt đối.";
-      el.privacyTitle.textContent = "Giữ khuôn mặt gốc · ảnh không rời thiết bị";
-      el.privacyMessage.textContent = "Tách nền và ghép phong cảnh ngay trên điện thoại. Máy chủ chỉ nhận mã nền đã chọn; không nhận ảnh cá nhân.";
-      el.agreeButton.innerHTML = 'ĐỒNG Ý & MỞ CAMERA <span aria-hidden="true">→</span>';
+      el.modeDisclaimer.textContent = "Dùng ảnh phong cảnh cố định trong thư viện. Người chụp vẫn được lấy trực tiếp từ ảnh gốc, không bị AI tạo sinh vẽ lại khuôn mặt.";
+      el.privacyTitle.textContent = "Nền thư viện · giữ khuôn mặt gốc";
+      el.privacyMessage.textContent = "Ảnh cá nhân không tải lên máy chủ. Chỉ mã phông nền đã chọn được gửi để lấy ảnh phong cảnh.";
     }
+    el.agreeButton.innerHTML = 'ĐỒNG Ý & MỞ CAMERA <span aria-hidden="true">→</span>';
     updateAgreeButton();
     clearError();
   }
@@ -142,11 +154,9 @@
   }
 
   function openNativeCamera() {
-    if (!consentAccepted || !el.consentCheck.checked || (selectedMode === "ai" && !el.aiUploadConsent.checked)) {
+    if (!consentAccepted || !el.consentCheck.checked) {
       showScreen("consent");
-      showError(selectedMode === "ai"
-        ? "Vui lòng xác nhận cả quyền sử dụng ảnh và việc gửi ảnh lên AI trước khi mở camera."
-        : "Vui lòng xác nhận quyền sử dụng ảnh trước khi mở camera.");
+      showError("Vui lòng xác nhận quyền sử dụng ảnh trước khi mở camera.");
       updateAgreeButton();
       return;
     }
@@ -317,12 +327,13 @@
     };
   }
 
-  async function generateBackground(scene) {
+  async function generateBackground(scene, mode) {
+    const seed = Math.floor(Math.random() * 2147483646) + 1;
     const response = await fetch("/api/background", {
       method: "POST",
       headers: { "content-type": "application/json" },
       cache: "no-store",
-      body: JSON.stringify({ scene })
+      body: JSON.stringify({ scene, mode, seed })
     });
     if (!response.ok) {
       let message = "Chưa tải được phông nền. Vui lòng thử lại.";
@@ -338,7 +349,8 @@
     return {
       bitmap,
       source: response.headers.get("x-background-source") || "photo-fallback",
-      attribution: response.headers.get("x-background-attribution") || ""
+      attribution: response.headers.get("x-background-attribution") || "",
+      seed: response.headers.get("x-background-seed") || ""
     };
   }
 
@@ -414,103 +426,48 @@
   async function processPhoto(file) {
     if (processing) return;
     processing = true;
+    currentPhotoFile = file;
+    updateSavedPhotoControls();
     clearError();
     showScreen("processing");
-    setProgress(10, "ĐANG ĐỌC ẢNH", "Đang giữ nguyên ảnh chụp…", "Ảnh gốc được xử lý ở độ phân giải cao ngay trên điện thoại.");
+    setProgress(7, "ĐANG ĐỌC ẢNH", "Đang giữ nguyên ảnh gốc…", "Ảnh được xử lý ở độ phân giải cao ngay trên điện thoại.");
     let background = null;
     try {
       const sourceCanvas = await imageFileToCanvas(file);
-      setProgress(28, "ĐANG TÁCH NỀN", "Đang bảo toàn khuôn mặt gốc…", "AI chỉ tạo mặt nạ tách người; không vẽ lại hoặc chỉnh sửa nét mặt.");
+      setProgress(25, "ĐANG TÁCH NGƯỜI", "Đang bảo toàn khuôn mặt…", "Mô hình chỉ tạo mặt nạ tách nền; không tái tạo hoặc vẽ lại khuôn mặt.");
       const person = await makePersonCutout(sourceCanvas);
-      setProgress(55, "ĐANG CHUẨN BỊ PHÔNG NỀN", "Chủ thể đã được tách", "Đang tải bối cảnh bạn đã chọn và căn chỉnh bố cục.");
-      background = await generateBackground(selectedScene);
-      setProgress(78, "ĐANG PHỐI GHÉP", "Đang xuất ảnh chất lượng cao…", "Giữ nguyên màu sắc và chi tiết người chụp; xuất ảnh dọc 1600 × 2000 px.");
+      setProgress(48, "ĐANG TẠO PHÔNG NỀN",
+        selectedMode === "ai-background" ? "AI đang sáng tạo phong cảnh mới…" : "Đang tải ảnh nền thư viện…",
+        selectedMode === "ai-background"
+          ? "AI tạo một cảnh mới theo chủ đề bạn đã chọn. Ảnh người vẫn ở trên điện thoại."
+          : "Đang lấy ảnh phong cảnh cố định đã chọn.");
+      background = await generateBackground(selectedScene, selectedMode);
+      setProgress(78, "ĐANG PHỐI GHÉP", "Đang hoàn thiện ảnh chất lượng cao…", "Giữ nguyên dữ liệu khuôn mặt từ ảnh chụp gốc, ghép người lên nền vừa tạo.");
       const output = await compositeImage(background.bitmap, person);
       clearResult();
       resultBlob = output;
       resultUrl = URL.createObjectURL(output);
       el.resultImage.src = resultUrl;
       const scene = SCENES[selectedScene];
-      el.resultDescription.textContent = "Người trong ảnh được lấy trực tiếp từ ảnh gốc; ứng dụng chỉ tách nền và ghép phong cảnh, không dùng AI tạo sinh để vẽ lại khuôn mặt.";
-      el.resultMeta.textContent = "Phông nền: " + scene.title + " · Ảnh xuất: 1600 × 2000 px · Giữ nguyên khuôn mặt" + (background.attribution ? " · Ảnh nền: " + background.attribution : "");
-      el.downloadHelp.textContent = "Ảnh JPEG 1600 × 2000 px. Khuôn mặt được giữ từ ảnh gốc, không bị AI tạo sinh vẽ lại.";
-      setProgress(100, "HOÀN TẤT", "Bức ảnh đã sẵn sàng!", "Bạn có thể tải ảnh về hoặc chụp lại bằng camera điện thoại.");
-      await delay(300);
-      showScreen("result");
-    } catch (error) {
-      showScreen("consent");
-      showError(error instanceof Error ? error.message : "Có lỗi khi xử lý ảnh. Vui lòng thử lại.");
-    } finally {
-      if (background?.bitmap && typeof background.bitmap.close === "function") background.bitmap.close();
-      processing = false;
-    }
-  }
-
-  async function processPhotoWithAI(file) {
-    if (processing) return;
-    processing = true;
-    clearError();
-    showScreen("processing");
-    setProgress(8, "ĐANG CHUẨN BỊ ẢNH", "Đang chuẩn bị gửi ảnh tới AI…", "Ảnh được nén trên thiết bị trước khi gửi theo chấp thuận của bạn.");
-    try {
-      const sourceCanvas = await imageFileToCanvas(file);
-      // FLUX.2 Klein 4B multi-reference inputs must each be smaller than 512x512.
-      // Keep the entire source photo visible instead of cutting off the person's head or feet.
-      const uploadCanvas = document.createElement("canvas");
-      uploadCanvas.width = 400;
-      uploadCanvas.height = 500;
-      const uploadCtx = uploadCanvas.getContext("2d");
-      uploadCtx.fillStyle = "#e8e8e5";
-      uploadCtx.fillRect(0, 0, uploadCanvas.width, uploadCanvas.height);
-      const containScale = Math.min(uploadCanvas.width / sourceCanvas.width, uploadCanvas.height / sourceCanvas.height);
-      const containedWidth = sourceCanvas.width * containScale;
-      const containedHeight = sourceCanvas.height * containScale;
-      uploadCtx.drawImage(
-        sourceCanvas,
-        (uploadCanvas.width - containedWidth) / 2,
-        (uploadCanvas.height - containedHeight) / 2,
-        containedWidth,
-        containedHeight
-      );
-      const dataUrl = uploadCanvas.toDataURL("image/jpeg", 0.88);
-      const imageBase64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
-      if (!imageBase64 || imageBase64.length > 1_500_000) {
-        throw new Error("Không thể chuẩn bị ảnh để gửi tới AI. Vui lòng chụp lại.");
+      if (background.source === "flux-ai") {
+        el.resultDescription.textContent = "AI đã tạo mới phong cảnh cho lượt này. Người trong ảnh được lấy trực tiếp từ ảnh gốc và ghép trên thiết bị; ảnh người không được gửi lên AI.";
+        el.resultMeta.textContent = "Nền AI tạo mới · " + scene.title + " · FLUX.1 Schnell · Ảnh xuất 1600 × 2000 px · Giữ khuôn mặt gốc";
+      } else {
+        el.resultDescription.textContent = "Người trong ảnh được giữ trực tiếp từ ảnh gốc và ghép với ảnh phong cảnh trong thư viện trên thiết bị.";
+        el.resultMeta.textContent = "Nền thư viện · " + scene.title + " · Ảnh xuất 1600 × 2000 px · Giữ khuôn mặt gốc" + (background.attribution ? " · " + background.attribution : "");
       }
-
-      setProgress(32, "ĐANG GỬI ẢNH ĐÃ ĐƯỢC CHẤP THUẬN", "AI đang tiếp nhận ảnh…", "Ảnh gốc được gửi tới Cloudflare AI để chỉnh sửa bằng FLUX.2 Klein 4B trong hạn mức miễn phí. AI được yêu cầu đặt người trên đúng đường, sân, cầu hoặc bậc đá và giữ cả hai chân tiếp xúc mặt nền.");
-      const response = await fetch("/api/ai-edit", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        cache: "no-store",
-        body: JSON.stringify({ scene: selectedScene, imageBase64, mimeType: "image/jpeg", consent: true })
-      });
-      if (!response.ok) {
-        let message = "AI chưa chỉnh sửa được ảnh. Vui lòng thử lại hoặc chuyển sang chế độ riêng tư.";
-        try {
-          const data = await response.json();
-          if (typeof data.message === "string") message = data.message;
-        } catch (_) {}
-        throw new Error(message);
-      }
-      setProgress(86, "ĐANG NHẬN ẢNH AI", "AI đã xử lý xong…", "Đang chuẩn bị ảnh kết quả để bạn kiểm tra.");
-      const output = await response.blob();
-      if (!output.type.startsWith("image/")) throw new Error("Mô hình AI không trả về ảnh hợp lệ.");
-      clearResult();
-      resultBlob = output;
-      resultUrl = URL.createObjectURL(output);
-      el.resultImage.src = resultUrl;
-      el.resultDescription.textContent = "AI đã chỉnh sửa trực tiếp ảnh gốc và tạo lại bối cảnh theo lựa chọn. Hãy kiểm tra kỹ khuôn mặt, trang phục và các chi tiết trước khi tải ảnh.";
-      el.resultMeta.textContent = "AI miễn phí · FLUX.2 Klein 4B · Phông nền: " + SCENES[selectedScene].title;
-      setProgress(100, "HOÀN TẤT", "Ảnh AI đã sẵn sàng!", "Bạn có thể tải ảnh về hoặc chụp lại. AI dùng hạn mức miễn phí hằng ngày; khi hết hạn mức, hãy thử lại vào ngày hôm sau.");
+      el.downloadHelp.textContent = "Ảnh JPEG 1600 × 2000 px. Khuôn mặt và trang phục được lấy từ ảnh gốc, không bị AI tạo sinh vẽ lại.";
+      setProgress(100, "HOÀN TẤT", "Bức ảnh đã sẵn sàng!", "Có thể tải ảnh về, chụp lại hoặc quay lại chọn một phong cảnh khác để ghép cùng ảnh này.");
       await delay(350);
       showScreen("result");
     } catch (error) {
       showScreen("consent");
-      showError(error instanceof Error ? error.message : "Có lỗi khi gửi ảnh tới AI. Vui lòng thử lại.");
+      showError(error instanceof Error ? error.message : "Có lỗi khi xử lý ảnh. Vui lòng thử lại.");
       updateAgreeButton();
     } finally {
+      if (background?.bitmap && typeof background.bitmap.close === "function") background.bitmap.close();
       processing = false;
+      updateAgreeButton();
     }
   }
 
@@ -580,18 +537,9 @@
     clearError();
   });
 
-  el.aiUploadConsent.addEventListener("change", () => {
-    updateAgreeButton();
-    clearError();
-  });
-
   el.agreeButton.addEventListener("click", () => {
     if (!el.consentCheck.checked) {
       showError("Vui lòng xác nhận quyền sử dụng ảnh trước khi mở camera.");
-      return;
-    }
-    if (selectedMode === "ai" && !el.aiUploadConsent.checked) {
-      showError("Vui lòng đọc và chấp thuận riêng việc gửi ảnh tới dịch vụ AI.");
       return;
     }
     if (!serviceReady) {
@@ -603,24 +551,60 @@
   });
 
   el.openCameraAgainBtn.addEventListener("click", openNativeCamera);
+  el.uploadPhotoBtn.addEventListener("click", openUploadPicker);
+  el.uploadPhotoCameraBtn.addEventListener("click", openUploadPicker);
+  el.uploadPhotoInput.addEventListener("change", async () => {
+    const file = el.uploadPhotoInput.files?.[0];
+    if (file) await handlePhotoFile(file);
+    el.uploadPhotoInput.value = "";
+  });
+  el.reprocessBtn.addEventListener("click", async () => {
+    if (!currentPhotoFile) return;
+    if (!consentAccepted || !el.consentCheck.checked) {
+      showError("Vui lòng xác nhận quyền sử dụng ảnh trước khi ghép lại.");
+      return;
+    }
+    await processPhoto(currentPhotoFile);
+  });
+  el.chooseSceneBtn.addEventListener("click", () => {
+    showScreen("consent");
+    updateSavedPhotoControls();
+    updateAgreeButton();
+    clearError();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
   el.backToGalleryBtn.addEventListener("click", () => {
     showScreen("consent");
-    consentAccepted = false;
-    el.consentCheck.checked = false;
     updateAgreeButton();
     clearError();
   });
 
-  el.nativeCameraInput.addEventListener("change", async () => {
-    const file = el.nativeCameraInput.files?.[0];
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      showScreen("camera");
-      showError("Tệp bạn chọn không phải là ảnh. Vui lòng chụp lại.");
+  async function handlePhotoFile(file) {
+    if (!file || !file.type || !file.type.startsWith("image/")) {
+      showScreen("consent");
+      showError("Tệp đã chọn không phải là ảnh. Vui lòng chọn ảnh JPEG, PNG hoặc HEIC.");
       return;
     }
-    if (selectedMode === "ai") await processPhotoWithAI(file);
-    else await processPhoto(file);
+    currentPhotoFile = file;
+    updateSavedPhotoControls();
+    await processPhoto(file);
+  }
+
+  function openUploadPicker() {
+    if (!consentAccepted || !el.consentCheck.checked) {
+      showScreen("consent");
+      showError("Vui lòng xác nhận quyền sử dụng ảnh trước khi tải ảnh lên để ghép.");
+      updateAgreeButton();
+      return;
+    }
+    clearError();
+    el.uploadPhotoInput.value = "";
+    el.uploadPhotoInput.click();
+  }
+
+  el.nativeCameraInput.addEventListener("change", async () => {
+    const file = el.nativeCameraInput.files?.[0];
+    if (file) await handlePhotoFile(file);
     el.nativeCameraInput.value = "";
   });
 
