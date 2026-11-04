@@ -89,3 +89,10 @@ jobs:
           test "$MODEL" = "FLUX.2-Klein-4B"
           echo "PASS: Free FLUX.2 Klein AI returned an edited photograph using a public test image; no personal photo was used."
 
+      - name: Save generated sample for visual quality check
+        uses: actions/upload-artifact@v4
+        with:
+          name: free-flux-klein-public-sample
+          path: ${{ runner.temp }}/ai-edit-result.jpg
+          retention-days: 1
+
