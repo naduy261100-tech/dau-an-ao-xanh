@@ -1,5 +1,5 @@
 const WINDOW_MS = 60 * 1000;
-const MAX_REQUESTS_PER_WINDOW = 12;
+const MAX_REQUESTS_PER_WINDOW = 30;
 const requestCounts = new Map();
 
 const BACKGROUNDS = {
@@ -123,7 +123,7 @@ export async function onRequestPost({ request, env }) {
     return json({ message: "Yêu cầu không hợp lệ từ nguồn bên ngoài." }, 403);
   }
   if (rateLimited(request)) {
-    return json({ message: "Bạn vừa tạo nhiều ảnh liên tiếp. Vui lòng đợi một phút rồi thử lại." }, 429);
+    return json({ message: "Có nhiều lượt tạo ảnh cùng lúc. Vui lòng đợi một phút rồi thử lại." }, 429);
   }
 
   let body;
@@ -132,46 +132,84 @@ export async function onRequestPost({ request, env }) {
   } catch (_) {
     return json({ message: "Không đọc được yêu cầu chọn phông nền." }, 400);
   }
-  const scene = body && typeof body.scene === "string" && BACKGROUNDS[body.scene] ? body.scene : "rice-gold";
-  const selected = BACKGROUNDS[scene];
 
-  // Try a true text-to-image background first when the free model is available.
-  // The source photo remains on the device; only a scene description is sent.
-  if (env.AI && typeof env.AI.run === "function") {
+  const sceneId = body && typeof body.scene === "string" && BACKGROUNDS[body.scene] ? body.scene : "rice-gold";
+  const selected = BACKGROUNDS[sceneId];
+  const mode = body?.mode === "library" ? "library" : "ai-background";
+
+  // Use a fixed photo only when the user explicitly chooses the library mode.
+  if (mode === "library") {
     try {
-      const result = await env.AI.run("@cf/black-forest-labs/flux-1-schnell", {
-        prompt: selected.prompt,
-        steps: 4,
-        seed: Math.floor(Math.random() * 2147483647)
-      });
-      if (result && typeof result.image === "string" && result.image) {
-        const binary = atob(result.image);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        return new Response(bytes, {
-          status: 200,
-          headers: {
-            "content-type": "image/jpeg",
-            "cache-control": "no-store, private, max-age=0",
-            "x-content-type-options": "nosniff",
-            "x-background-source": "flux-ai",
-            "x-background-attribution": "",
-            "x-background-title": selected.title,
-            "content-disposition": "inline; filename=\"dau-an-ao-xanh-ai-background.jpg\""
-          }
-        });
-      }
-      throw new Error("Workers AI returned no image payload.");
+      return await photoFallback(selected);
     } catch (error) {
-      const detail = error instanceof Error ? error.message : String(error || "Unknown Workers AI error");
-      console.error("Workers AI background generation failed:", detail.slice(0, 500));
+      console.error("Selected photo background failed:", error instanceof Error ? error.message : String(error));
+      return json({ message: "Không tải được ảnh nền thư viện. Vui lòng thử lại." }, 503);
     }
   }
 
+  // Only a scene ID and text prompt are sent to Workers AI.
+  // The user's photograph never leaves the browser in this mode.
+  if (!env.AI || typeof env.AI.run !== "function") {
+    return json({ message: "Dịch vụ tạo phông nền AI chưa sẵn sàng. Ảnh người vẫn an toàn trên điện thoại; vui lòng thử lại sau." }, 503);
+  }
+
+  const parsedSeed = Number(body?.seed);
+  const seed = Number.isSafeInteger(parsedSeed) && parsedSeed > 0
+    ? parsedSeed
+    : Math.floor(Math.random() * 2147483646) + 1;
+  const lightingStyles = [
+    "Soft clear morning light with gentle long shadows and clean atmospheric depth.",
+    "Warm late-afternoon side light, natural golden highlights without an orange color cast.",
+    "Bright overcast daylight, soft realistic shadows and balanced natural colors.",
+    "Fresh early-sunrise light after a light mist, realistic exposure and restrained color.",
+    "Clear spring daylight with subtle directional sunlight and true-to-life color."
+  ];
+  const lighting = lightingStyles[seed % lightingStyles.length];
+  const prompt = [
+    selected.prompt,
+    "Create a completely new original landscape photograph for this request, not a copy of a stock photo.",
+    "Professional real-camera travel photography, vertical portrait composition, full-frame camera, natural 35mm lens, camera at a standing person's eye level, believable human-scale perspective.",
+    "CRITICAL COMPOSITION: the lower 30 percent must contain a broad, continuous, clearly visible, dry, level standing surface matching the scene (path, paved lane, stone courtyard, bridge deck or dry viewing platform). The surface must extend to the bottom edge and have enough open area for one full-length person to be composited later.",
+    "Keep the horizon and main scenery in the upper half. Leave an uncluttered central foreground standing area. Show realistic ground texture and a natural light direction. No steep aerial or drone viewpoint.",
+    lighting,
+    "Do not include any people, human silhouettes, faces, statues, mannequins, animals, signs, letters, captions, logos, borders or watermarks. Water is background scenery only and must never occupy the standing area.",
+    "The result must look like a genuine high-quality travel photograph, not CGI, painting, collage or fantasy art."
+  ].join(" ");
+
   try {
-    return await photoFallback(selected);
+    const result = await env.AI.run("@cf/black-forest-labs/flux-1-schnell", {
+      prompt,
+      steps: 6,
+      seed
+    });
+    if (!result || typeof result.image !== "string" || !result.image) {
+      throw new Error("model-returned-no-image");
+    }
+    const binary = atob(result.image);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    if (bytes.length < 10000) throw new Error("model-image-too-small");
+
+    return new Response(bytes, {
+      status: 200,
+      headers: {
+        "content-type": "image/jpeg",
+        "cache-control": "no-store, private, max-age=0",
+        "x-content-type-options": "nosniff",
+        "x-background-source": "flux-ai",
+        "x-background-attribution": "",
+        "x-background-title": selected.title,
+        "x-background-seed": String(seed),
+        "x-background-model": "FLUX.1-Schnell",
+        "content-disposition": "inline; filename=\"dau-an-ao-xanh-ai-background.jpg\""
+      }
+    });
   } catch (error) {
-    console.error("Selected photo background failed:", error instanceof Error ? error.message : String(error));
-    return json({ message: "Không tải được phông nền đã chọn. Vui lòng chọn bối cảnh khác hoặc thử lại." }, 503);
+    const detail = error instanceof Error ? error.message : String(error || "unknown-error");
+    console.error("FLUX.1 Schnell background generation failed:", detail.slice(0, 400));
+    return json({
+      message: "AI chưa tạo được phông nền mới. Có thể mô hình đang bận hoặc đã hết hạn mức miễn phí trong ngày. Vui lòng thử tạo lại hoặc chuyển sang nền thư viện; ảnh người vẫn chưa được gửi lên AI.",
+      errorCode: detail.slice(0, 100)
+    }, 503);
   }
 }
