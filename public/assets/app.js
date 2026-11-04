@@ -21,6 +21,7 @@
     processingScreen: $("processingScreen"),
     processingTitle: $("processingTitle"),
     processingMessage: $("processingMessage"),
+    privacyReminder: $("processingPrivacyReminder"),
     progressFill: $("progressFill"),
     progressLabel: $("progressLabel"),
     progressPercent: $("progressPercent"),
@@ -109,11 +110,13 @@
     const ai = mode === "ai";
     el.aiConsentRow.hidden = !ai;
     if (ai) {
+      el.privacyReminder.textContent = "Ảnh đang được gửi tới Cloudflare AI và Black Forest Labs theo chấp thuận của bạn.";
       el.modeDisclaimer.textContent = "Ảnh gốc sẽ được gửi qua Cloudflare AI đến Black Forest Labs để chỉnh sửa. Mô hình có thể thay đổi một số chi tiết; hãy kiểm tra kết quả trước khi tải về.";
       el.privacyTitle.textContent = "Chế độ AI gửi ảnh lên dịch vụ bên ngoài";
       el.privacyMessage.textContent = "Ảnh chụp được gửi từ điện thoại tới máy chủ Cloudflare và mô hình FLUX.1 Kontext Pro của Black Forest Labs để tạo ảnh chỉnh sửa. Website không lưu ảnh vào thư viện hoặc cơ sở dữ liệu; việc xử lý dữ liệu tại nhà cung cấp tuân theo chính sách của họ.";
       el.agreeButton.innerHTML = 'ĐỒNG Ý & GỬI ẢNH TỚI AI <span aria-hidden="true">→</span>';
     } else {
+      el.privacyReminder.textContent = "Ảnh gốc không rời khỏi thiết bị của bạn.";
       el.modeDisclaimer.textContent = "Chế độ riêng tư xử lý toàn bộ ảnh trên điện thoại; kết quả ghép vẫn có thể chưa hoàn toàn tự nhiên.";
       el.privacyTitle.textContent = "Ảnh gốc được giữ trên điện thoại";
       el.privacyMessage.textContent = "Ảnh cá nhân không tải lên máy chủ. Máy chủ chỉ nhận mã phông nền đã chọn.";
