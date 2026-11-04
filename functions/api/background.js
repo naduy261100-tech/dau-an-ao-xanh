@@ -76,7 +76,6 @@ function json(data, status = 200) {
     status,
     headers: {
       "content-type": "application/json; charset=utf-8",
-      "x-background-code-version": "20261104-no-seed-v2",
       "cache-control": "no-store, private, max-age=0",
       "x-content-type-options": "nosniff"
     }
@@ -111,7 +110,6 @@ async function photoFallback(background) {
       "cache-control": "no-store, private, max-age=0",
       "x-content-type-options": "nosniff",
       "x-background-source": "photo-fallback",
-      "x-background-code-version": "20261104-no-seed-v2",
       "x-background-attribution": background.author,
       "x-background-title": background.title,
       "content-disposition": "inline; filename=\"dau-an-ao-xanh-background.jpg\""
@@ -170,7 +168,7 @@ export async function onRequestPost({ request, env }) {
   const prompt = [
     selected.prompt,
     "Create a completely new original landscape photograph for this request, not a copy of a stock photo.",
-    "Professional real-camera travel photography, vertical portrait composition, full-frame camera, natural 35mm lens, camera at a standing person's eye level, believable human-scale perspective.",
+    "Premium high-detail professional real-camera travel photography, crisp natural textures and fine detail, vertical portrait composition, full-frame camera, natural 35mm lens, camera at a standing person's eye level, believable human-scale perspective, realistic dynamic range, clean sharp focus, physically plausible natural light.",
     "CRITICAL COMPOSITION: the lower 30 percent must contain a broad, continuous, clearly visible, dry, level standing surface matching the scene (path, paved lane, stone courtyard, bridge deck or dry viewing platform). The surface must extend to the bottom edge and have enough open area for one full-length person to be composited later.",
     "Keep the horizon and main scenery in the upper half. Leave an uncluttered central foreground standing area. Show realistic ground texture and a natural light direction. No steep aerial or drone viewpoint.",
     lighting,
@@ -181,7 +179,7 @@ export async function onRequestPost({ request, env }) {
   try {
     const result = await env.AI.run("@cf/black-forest-labs/flux-1-schnell", {
       prompt,
-      steps: 6
+      steps: 8
     });
     if (!result || typeof result.image !== "string" || !result.image) {
       throw new Error("model-returned-no-image");
@@ -198,7 +196,6 @@ export async function onRequestPost({ request, env }) {
         "cache-control": "no-store, private, max-age=0",
         "x-content-type-options": "nosniff",
         "x-background-source": "flux-ai",
-        "x-background-code-version": "20261104-no-seed-v2",
         "x-background-attribution": "",
         "x-background-title": selected.title,
         "x-background-seed": String(seed),
