@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#ffffff">
   <meta name="description" content="Dấu ấn Áo xanh — Check-in AI của Chi đoàn Trường Tiểu học Minh Khương.">
   <title>Dấu ấn Áo xanh | Check-in AI Minh Khương</title>
-  <link rel="stylesheet" href="/assets/styles.css?v=20261104-walkable-scenes">
+  <link rel="stylesheet" href="/assets/styles.css?v=20261104-face-preserve">
 </head>
 <body>
   <main class="app-shell">
@@ -96,18 +96,18 @@
         <div class="mode-options" role="group" aria-label="Chọn chế độ xử lý ảnh">
           <button class="mode-card is-selected" type="button" data-mode="private" aria-pressed="true">
             <span class="mode-card-icon">▣</span>
-            <span class="mode-card-title">Riêng tư trên điện thoại</span>
-            <span class="mode-card-copy">Ảnh ở lại trên điện thoại. Tách người và phối ghép 2D.</span>
-            <span class="mode-card-tag">Riêng tư · Không gửi ảnh</span>
+            <span class="mode-card-title">Giữ nguyên khuôn mặt</span>
+            <span class="mode-card-copy">Tách nền và ghép cảnh ngay trên điện thoại. Không dùng AI tạo sinh để vẽ lại khuôn mặt hay trang phục.</span>
+            <span class="mode-card-tag">Khuyên dùng · Ảnh không rời thiết bị</span>
           </button>
           <button class="mode-card" type="button" data-mode="ai" aria-pressed="false">
             <span class="mode-card-icon">✦</span>
-            <span class="mode-card-title">AI phối cảnh chân thực hơn</span>
-            <span class="mode-card-copy">AI kết hợp ảnh người và ảnh phong cảnh tham chiếu, điều chỉnh ánh sáng và phối cảnh.</span>
-            <span class="mode-card-tag">Miễn phí · Dự kiến khoảng 50 lượt/ngày*</span>
+            <span class="mode-card-title">AI sáng tạo toàn cảnh</span>
+            <span class="mode-card-copy">AI vẽ lại cả người và bối cảnh để hòa phối. Có thể làm khác khuôn mặt, tóc hoặc trang phục.</span>
+            <span class="mode-card-tag">Tùy chọn · Có gửi ảnh lên AI</span>
           </button>
         </div>
-        <p class="mode-disclaimer" id="modeDisclaimer">Chế độ riêng tư xử lý toàn bộ ảnh trên điện thoại; kết quả ghép vẫn có thể chưa hoàn toàn tự nhiên.</p>
+        <p class="mode-disclaimer" id="modeDisclaimer">Đang chọn chế độ giữ nguyên khuôn mặt: người trong ảnh được lấy trực tiếp từ ảnh gốc, chỉ tách nền và ghép cảnh. Muốn giữ đúng diện mạo, hãy dùng chế độ này.</p>
       </section>
 
       <div class="privacy-panel">
@@ -115,7 +115,7 @@
         <div>
           <strong id="privacyTitle">Ảnh gốc được giữ trên điện thoại</strong>
           <p id="privacyMessage">Ảnh cá nhân không tải lên máy chủ. Máy chủ chỉ nhận mã phông nền đã chọn.</p>
-          <a href="/privacy.html?v=20261104-walkable-scenes" target="_blank" rel="noopener">Xem thông tin xử lý ảnh và quyền riêng tư ↗</a>
+          <a href="/privacy.html?v=20261104-face-preserve" target="_blank" rel="noopener">Xem thông tin xử lý ảnh và quyền riêng tư ↗</a>
         </div>
       </div>
 
@@ -197,6 +197,6 @@
     </footer>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/selfie_segmentation.js" crossorigin="anonymous" defer></script>
-  <script src="/assets/app.js?v=20261104-walkable-scenes" defer></script>
+  <script src="/assets/app.js?v=20261104-face-preserve" defer></script>
 </body>
 </html>
