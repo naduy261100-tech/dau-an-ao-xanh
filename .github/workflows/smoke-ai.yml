@@ -10,11 +10,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Allow Cloudflare deployment from main to finish
-        run: sleep 20
+        run: sleep 75
       - name: Check every background option without uploading a person photo
         shell: bash
         run: |
           set -euo pipefail
+          declare -A expected_titles=(
+            [rice-gold]="Golden terraced rice fields"
+            [rice-green]="Green terraced valley with a walking path"
+            [rice-path]="Winding path through rice terraces"
+            [village-stone]="Stone path in a mountain village"
+            [village-road]="Mountain village road"
+            [hill-path]="Winding trail across green hills"
+            [wood-bridge]="Wooden footbridge in a green forest"
+            [garden-walk]="Walkway in a lush garden"
+            [traditional-garden]="Traditional wooden house garden"
+            [flower-garden]="Flower garden with a paved walkway"
+            [waterfall]="Forest waterfall with dry stone viewing area"
+          )
           scenes=(rice-gold rice-green rice-path village-stone village-road hill-path wood-bridge garden-walk traditional-garden flower-garden waterfall)
           index=0
           for scene in "${scenes[@]}"; do
@@ -40,6 +53,10 @@ jobs:
             echo "CONTENT_TYPE=$MIME BYTES=$SIZE SOURCE=$SOURCE TITLE=$TITLE"
             test "$MIME" = "image/jpeg"
             test "$SIZE" -gt 10000
+            if [ "$TITLE" != "${expected_titles[$scene]}" ]; then
+              echo "Wrong background returned for $scene: expected '${expected_titles[$scene]}', got '$TITLE'"
+              exit 1
+            fi
             case "$SOURCE" in
               flux-ai|photo-fallback) ;;
               *) echo "Missing or unknown background source"; exit 1 ;;
@@ -63,7 +80,7 @@ jobs:
 
           image_base64="$(base64 -w 0 "$sample")"
           jq -n \
-            --arg scene "rice-gold" \
+            --arg scene "wood-bridge" \
             --arg image "$image_base64" \
             '{scene:$scene,imageBase64:$image,mimeType:"image/jpeg",consent:true}' > "$request"
 
