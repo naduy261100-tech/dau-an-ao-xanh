@@ -101,19 +101,47 @@
         <p class="photo-note">Phông nền là ảnh phong cảnh chụp thật, có ghi nguồn ảnh. Chất lượng ghép phụ thuộc góc chụp và ánh sáng của ảnh gốc.</p>
       </section>
 
+      <section class="mode-picker" aria-labelledby="modeTitle">
+        <div class="mode-heading">
+          <span class="picker-kicker">CÁCH XỬ LÝ ẢNH</span>
+          <h3 id="modeTitle">Bạn muốn xử lý ảnh theo cách nào?</h3>
+        </div>
+        <div class="mode-options" role="group" aria-label="Chọn chế độ xử lý ảnh">
+          <button class="mode-card is-selected" type="button" data-mode="private" aria-pressed="true">
+            <span class="mode-card-icon">▣</span>
+            <span class="mode-card-title">Riêng tư trên điện thoại</span>
+            <span class="mode-card-copy">Ảnh không rời khỏi thiết bị. Tách người và ghép phông nền 2D.</span>
+            <span class="mode-card-tag">Không gửi ảnh · Không phí AI</span>
+          </button>
+          <button class="mode-card" type="button" data-mode="ai" aria-pressed="false">
+            <span class="mode-card-icon">✦</span>
+            <span class="mode-card-title">AI chỉnh ảnh chân thực hơn</span>
+            <span class="mode-card-copy">AI chỉnh trực tiếp ảnh gốc, cố gắng hòa phối người với cảnh.</span>
+            <span class="mode-card-tag">Gửi ảnh lên AI · Khoảng 0,04 USD/ảnh</span>
+          </button>
+        </div>
+        <p class="mode-disclaimer" id="modeDisclaimer">Chế độ riêng tư xử lý toàn bộ ảnh trên điện thoại; kết quả ghép vẫn có thể chưa hoàn toàn tự nhiên.</p>
+      </section>
+
       <div class="privacy-panel">
         <div class="privacy-icon" aria-hidden="true">▣</div>
         <div>
-          <strong>Ảnh gốc được giữ trên điện thoại</strong>
-          <p>Ảnh cá nhân không tải lên máy chủ. Máy chủ chỉ nhận mã phông nền đã chọn.</p>
-          <a href="/privacy.html" target="_blank" rel="noopener">Xem thông tin xử lý ảnh và quyền riêng tư ↗</a>
+          <strong id="privacyTitle">Ảnh gốc được giữ trên điện thoại</strong>
+          <p id="privacyMessage">Ảnh cá nhân không tải lên máy chủ. Máy chủ chỉ nhận mã phông nền đã chọn.</p>
+          <a href="/privacy.html?v=20261104-ai-edit" target="_blank" rel="noopener">Xem thông tin xử lý ảnh và quyền riêng tư ↗</a>
         </div>
       </div>
 
       <label class="consent-check" for="consentCheck">
         <input type="checkbox" id="consentCheck">
         <span class="custom-check" aria-hidden="true"></span>
-        <span class="consent-text">Tôi là người trong ảnh hoặc đã được người trong ảnh/người đại diện cho phép sử dụng ảnh này và đồng ý xử lý trên thiết bị.</span>
+        <span class="consent-text">Tôi là người trong ảnh hoặc đã được người trong ảnh/người đại diện cho phép sử dụng ảnh này và đồng ý xử lý theo chế độ đã chọn.</span>
+      </label>
+
+      <label class="consent-check ai-upload-consent" id="aiConsentRow" for="aiUploadConsent" hidden>
+        <input type="checkbox" id="aiUploadConsent">
+        <span class="custom-check" aria-hidden="true"></span>
+        <span class="consent-text">Tôi đồng ý gửi ảnh gốc qua Cloudflare AI đến mô hình FLUX.1 Kontext Pro của Black Forest Labs để chỉnh sửa. Tôi hiểu ảnh được xử lý bởi nhà cung cấp bên ngoài, AI có thể làm thay đổi một số chi tiết khuôn mặt/trang phục và mỗi ảnh tạo ra có chi phí dự kiến khoảng 0,04 USD, tính vào tài khoản vận hành ứng dụng.</span>
       </label>
 
       <button class="button button-primary agree-button" id="agreeButton" type="button" disabled>
@@ -182,6 +210,6 @@
     </footer>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/selfie_segmentation.js" crossorigin="anonymous" defer></script>
-  <script src="/assets/app.js?v=20261104-mediapipe-loader" defer></script>
+  <script src="/assets/app.js?v=20261104-ai-edit-mode" defer></script>
 </body>
 </html>
