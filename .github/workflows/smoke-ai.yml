@@ -1,0 +1,28 @@
+name: One-shot free AI smoke test
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  smoke:
+    if: startsWith(github.event.head_commit.message, '[smoke-ai]')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate one generic Tuyen Quang background using free Workers AI
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -X POST "https://dau-an-ao-xanh.naduy261100.workers.dev/api/background" \
+            -H "Content-Type: application/json" \
+            --data '{"scene":"rice"}' \
+            --output "$RUNNER_TEMP/ai-background.jpg" \
+            --write-out "HTTP_STATUS=%{http_code}\n"
+          MIME="$(file --brief --mime-type "$RUNNER_TEMP/ai-background.jpg")"
+          SIZE="$(wc -c < "$RUNNER_TEMP/ai-background.jpg")"
+          echo "CONTENT_TYPE=$MIME"
+          echo "IMAGE_BYTES=$SIZE"
+          test "$MIME" = "image/jpeg"
+          test "$SIZE" -gt 10000
+          echo "PASS: Workers AI returned a non-empty JPEG background."
