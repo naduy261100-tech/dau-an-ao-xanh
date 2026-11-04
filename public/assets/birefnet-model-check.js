@@ -10,14 +10,20 @@ async function run() {
     report("Loading local BiRefNet background remover…");
     const module = await import("https://cdn.jsdelivr.net/npm/@bg0/browser@0.1.1/+esm");
     if (typeof module.removeBackground !== "function") throw new Error("removeBackground export missing");
-    report("Downloading public portrait sample…");
-    const response = await fetch("https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1000");
-    if (!response.ok) throw new Error("Public sample image failed: HTTP " + response.status);
-    const inputBlob = await response.blob();
-    const sourceUrl = URL.createObjectURL(inputBlob);
-    document.getElementById("source").src = sourceUrl;
+    report("Loading public portrait sample…");
+    const sample = document.getElementById("source");
+    sample.crossOrigin = "anonymous";
+    sample.src = "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1000";
+    await sample.decode();
+    const sampleCanvas = document.createElement("canvas");
+    sampleCanvas.width = sample.naturalWidth;
+    sampleCanvas.height = sample.naturalHeight;
+    const sampleContext = sampleCanvas.getContext("2d");
+    if (!sampleContext) throw new Error("Canvas unavailable");
+    sampleContext.drawImage(sample, 0, 0);
+    const inputBlob = await new Promise((resolve, reject) => sampleCanvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("Unable to prepare the public sample image")), "image/jpeg", 0.92));
     report("Running BiRefNet segmentation locally…", "No photo is sent to the server.");
-    const result = await module.removeBackground(new File([inputBlob], "public-test.jpg", { type: inputBlob.type }), {
+    const result = await module.removeBackground(new File([inputBlob], "public-test.jpg", { type: "image/jpeg" }), {
       model: "lite",
       quality: "quality",
       onProgress: p => report("BiRefNet: " + p.stage + " · " + Math.round(p.progress * 100) + "%", p.message || "")
@@ -45,7 +51,7 @@ async function run() {
       transparency: { transparent, soft, opaque }
     };
     bitmap.close();
-    URL.revokeObjectURL(sourceUrl);
+    sampleCanvas.width = sampleCanvas.height = 0;
     report("PASS — BiRefNet returned a transparent cutout.", JSON.stringify(data, null, 2));
   } catch (error) {
     report("FAIL — " + (error?.message || String(error)), error?.stack || "");
