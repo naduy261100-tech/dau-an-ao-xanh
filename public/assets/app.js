@@ -13,11 +13,14 @@
     resultImage: $("resultImage"), captureBtn: $("captureBtn"),
     switchBtn: $("switchBtn"), downloadBtn: $("downloadBtn"), retakeBtn: $("retakeBtn"),
     processingPanel: $("processingPanel"), errorBox: $("errorBox"),
-    processingTitle: $("processingTitle")
+    processingTitle: $("processingTitle"),
+    nativeCaptureControls: $("nativeCaptureControls"),
+    nativeCaptureBtn: $("nativeCaptureBtn"),
+    nativeCameraInput: $("nativeCameraInput")
   };
 
   let stream = null;
-  let facingMode = "user";
+  let facingMode = "environment";
   let mode = "locked";
   let resultUrl = null;
   let processing = false;
@@ -75,6 +78,76 @@
     el.cameraVideo.srcObject = null;
   }
 
+  async function waitForCameraRelease() {
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+
+  async function requestCamera(mode) {
+    const media = navigator.mediaDevices;
+    const dimensions = {
+      width: { ideal: 1280 },
+      height: { ideal: 1600 }
+    };
+
+    // First request the requested lens explicitly. "ideal" alone can silently
+    // return the front camera when the back camera was requested.
+    try {
+      return await media.getUserMedia({
+        audio: false,
+        video: { ...dimensions, facingMode: { exact: mode } }
+      });
+    } catch (exactError) {
+      if (exactError?.name === "NotAllowedError" || exactError?.name === "PermissionDeniedError" ||
+          exactError?.name === "SecurityError" || exactError?.name === "NotReadableError") {
+        throw exactError;
+      }
+    }
+
+    // Some mobile browsers ignore facingMode but expose device labels after
+    // the first permission grant. Pick the camera whose label identifies its
+    // physical direction, then request that device by its exact deviceId.
+    let cameras = [];
+    try {
+      const devices = await media.enumerateDevices();
+      cameras = devices.filter(device => device.kind === "videoinput");
+    } catch (_) {}
+
+    if (!cameras.length) {
+      throw new Error("Trình duyệt không tìm thấy camera. Hãy kiểm tra quyền Camera và thử lại.");
+    }
+
+    const isRear = mode === "environment";
+    const pattern = isRear
+      ? /(back|rear|environment|world|sau|arrière|trasera|背面|外側)/i
+      : /(front|user|facetime|selfie|trước|前面|内側)/i;
+
+    let candidates = cameras.filter(device => pattern.test(device.label || ""));
+    if (!candidates.length) {
+      // On many phones the front camera is listed first and rear cameras after it.
+      // If labels are hidden, use the last camera for rear and first for front.
+      candidates = [isRear && cameras.length > 1 ? cameras[cameras.length - 1] : cameras[0]];
+    }
+
+    let lastError;
+    for (const camera of candidates) {
+      try {
+        return await media.getUserMedia({
+          audio: false,
+          video: { ...dimensions, deviceId: { exact: camera.deviceId } }
+        });
+      } catch (error) {
+        lastError = error;
+        if (error?.name === "NotAllowedError" || error?.name === "PermissionDeniedError") throw error;
+      }
+    }
+
+    if (isRear) {
+      throw new Error("Không mở được camera sau trên trình duyệt này. Hãy thử nút “MỞ CAMERA ĐIỆN THOẠI (DỰ PHÒNG)” bên dưới.");
+    }
+    if (lastError) throw lastError;
+    throw new Error("Không mở được camera. Hãy kiểm tra quyền truy cập camera của trình duyệt.");
+  }
+
   async function openCamera() {
     clearError();
     if (mode !== "free-ai") {
@@ -86,54 +159,44 @@
       return;
     }
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      showError("Trình duyệt chưa hỗ trợ camera trực tiếp. Hãy mở đường link bằng Safari hoặc Chrome phiên bản mới.");
+      el.nativeCaptureControls.hidden = false;
+      showError("Trình duyệt không hỗ trợ camera trực tiếp. Bạn có thể dùng nút camera điện thoại bên dưới.");
       return;
     }
 
     stopCamera();
+    await waitForCameraRelease();
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: {
-          facingMode: { ideal: facingMode },
-          width: { ideal: 1600 },
-          height: { ideal: 2000 },
-          aspectRatio: { ideal: 0.8 }
-        }
-      });
+      stream = await requestCamera(facingMode);
+      const track = stream.getVideoTracks()[0];
+      const settings = track && track.getSettings ? track.getSettings() : {};
+      const actualFacing = settings.facingMode || facingMode;
+
       el.cameraVideo.srcObject = stream;
-      el.cameraVideo.classList.toggle("front-camera", facingMode === "user");
+      el.cameraVideo.classList.toggle("front-camera", actualFacing === "user");
       await el.cameraVideo.play();
 
       el.cameraPlaceholder.hidden = true;
       el.cameraVideo.hidden = false;
       el.resultImage.hidden = true;
       el.cameraBadge.hidden = false;
+      el.cameraBadge.textContent = actualFacing === "environment" ? "CAMERA SAU" : "CAMERA TRƯỚC";
       el.resultBadge.hidden = true;
       el.startControls.hidden = true;
+      el.nativeCaptureControls.hidden = true;
       el.resultControls.hidden = true;
       el.cameraControls.hidden = false;
+      el.switchBtn.textContent = actualFacing === "environment" ? "↻ CAMERA TRƯỚC" : "↻ CAMERA SAU";
     } catch (err) {
       const denied = err && (err.name === "NotAllowedError" || err.name === "PermissionDeniedError");
+      el.nativeCaptureControls.hidden = false;
       showError(denied
-        ? "Bạn chưa cho phép trình duyệt truy cập camera. Hãy bật quyền Camera trong cài đặt trình duyệt rồi thử lại."
-        : "Không mở được camera. Hãy kiểm tra camera và thử lại.");
+        ? "Bạn chưa cấp quyền camera cho trình duyệt. Hãy cho phép Camera hoặc dùng nút camera điện thoại dự phòng."
+        : (err instanceof Error ? err.message : "Không mở được camera. Hãy thử camera điện thoại dự phòng."));
     }
   }
 
-  function captureFrame() {
-    const video = el.cameraVideo;
-    if (!video.videoWidth || !video.videoHeight) {
-      throw new Error("Camera chưa sẵn sàng. Vui lòng chờ một chút rồi chụp lại.");
-    }
-    const maxSide = 1600;
-    const scale = Math.min(1, maxSide / Math.max(video.videoWidth, video.videoHeight));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.max(2, Math.round(video.videoWidth * scale));
-    canvas.height = Math.max(2, Math.round(video.videoHeight * scale));
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
+  function estimateScene(canvas) {
     const probe = document.createElement("canvas");
     probe.width = 32;
     probe.height = 32;
@@ -145,8 +208,27 @@
       brightness += 0.2126 * pixels[i] + 0.7152 * pixels[i + 1] + 0.0722 * pixels[i + 2];
     }
     brightness /= pixels.length / 4;
+    return brightness > 135 ? "rice" : "lake";
+  }
 
-    return { canvas, scene: brightness > 135 ? "rice" : "lake" };
+  function canvasFromSource(source, sourceWidth, sourceHeight) {
+    const maxSide = 1280;
+    const scale = Math.min(1, maxSide / Math.max(sourceWidth, sourceHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(2, Math.round(sourceWidth * scale));
+    canvas.height = Math.max(2, Math.round(sourceHeight * scale));
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+    return canvas;
+  }
+
+  function captureFrame() {
+    const video = el.cameraVideo;
+    if (!video.videoWidth || !video.videoHeight) {
+      throw new Error("Camera chưa sẵn sàng. Vui lòng chờ một chút rồi chụp lại.");
+    }
+    const canvas = canvasFromSource(video, video.videoWidth, video.videoHeight);
+    return { canvas, scene: estimateScene(canvas) };
   }
 
   async function createSegmenter() {
@@ -185,26 +267,41 @@
     });
 
     if (!results || !results.segmentationMask) {
-      throw new Error("AI chưa tách được người trong ảnh. Hãy chụp rõ người, tránh nền quá rối.");
+      throw new Error("AI chưa tạo được mặt nạ tách người. Hãy chụp rõ toàn thân và tránh nền quá rối.");
     }
 
+    // MediaPipe's mask is a grayscale confidence image. Do not rely on its
+    // alpha channel: some browsers expose the mask as fully opaque even when
+    // the RGB values contain the foreground/background confidence.
+    const width = sourceCanvas.width;
+    const height = sourceCanvas.height;
+    const maskCanvas = document.createElement("canvas");
+    maskCanvas.width = width;
+    maskCanvas.height = height;
+    const maskCtx = maskCanvas.getContext("2d", { willReadFrequently: true });
+    maskCtx.drawImage(results.segmentationMask, 0, 0, width, height);
+    const maskPixels = maskCtx.getImageData(0, 0, width, height).data;
+
     const cutout = document.createElement("canvas");
-    cutout.width = sourceCanvas.width;
-    cutout.height = sourceCanvas.height;
+    cutout.width = width;
+    cutout.height = height;
     const ctx = cutout.getContext("2d", { willReadFrequently: true });
     ctx.drawImage(sourceCanvas, 0, 0);
-    ctx.globalCompositeOperation = "destination-in";
-    ctx.filter = "blur(0.7px)";
-    ctx.drawImage(results.segmentationMask, 0, 0, cutout.width, cutout.height);
-    ctx.filter = "none";
-    ctx.globalCompositeOperation = "source-over";
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const pixels = imageData.data;
 
-    const pixels = ctx.getImageData(0, 0, cutout.width, cutout.height).data;
-    let minX = cutout.width, minY = cutout.height, maxX = -1, maxY = -1;
-    for (let y = 0; y < cutout.height; y += 3) {
-      for (let x = 0; x < cutout.width; x += 3) {
-        const alpha = pixels[(y * cutout.width + x) * 4 + 3];
-        if (alpha > 36) {
+    let minX = width, minY = height, maxX = -1, maxY = -1;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const i = (y * width + x) * 4;
+        const probability = maskPixels[i] / 255;
+        // Smooth the matte edge to retain hair/clothing contours without
+        // leaving the rectangular original background visible.
+        const t = Math.max(0, Math.min(1, (probability - 0.12) / 0.68));
+        const alpha = t * t * (3 - 2 * t);
+        pixels[i + 3] = Math.round(pixels[i + 3] * alpha);
+
+        if (pixels[i + 3] > 36) {
           if (x < minX) minX = x;
           if (x > maxX) maxX = x;
           if (y < minY) minY = y;
@@ -212,15 +309,18 @@
         }
       }
     }
+
     if (maxX < minX || maxY < minY) {
-      throw new Error("Không nhận diện được người trong ảnh. Hãy đứng cách nền một khoảng và chụp lại.");
+      throw new Error("Không nhận diện được người trong ảnh. Hãy đứng cách nền một khoảng, đủ sáng và chụp lại.");
     }
 
-    const margin = Math.round(Math.max(cutout.width, cutout.height) * 0.012);
+    ctx.putImageData(imageData, 0, 0);
+
+    const margin = Math.round(Math.max(width, height) * 0.015);
     minX = Math.max(0, minX - margin);
     minY = Math.max(0, minY - margin);
-    maxX = Math.min(cutout.width - 1, maxX + margin);
-    maxY = Math.min(cutout.height - 1, maxY + margin);
+    maxX = Math.min(width - 1, maxX + margin);
+    maxY = Math.min(height - 1, maxY + margin);
 
     const trimmed = document.createElement("canvas");
     trimmed.width = maxX - minX + 1;
@@ -229,9 +329,10 @@
       cutout, minX, minY, trimmed.width, trimmed.height,
       0, 0, trimmed.width, trimmed.height
     );
+
     return {
       canvas: trimmed,
-      touchesBottom: maxY >= sourceCanvas.height * 0.94,
+      touchesBottom: maxY >= height * 0.94,
       aspect: trimmed.height / trimmed.width
     };
   }
@@ -381,6 +482,30 @@
   el.switchBtn.addEventListener("click", async () => {
     facingMode = facingMode === "user" ? "environment" : "user";
     await openCamera();
+  });
+
+  el.nativeCaptureBtn.addEventListener("click", () => {
+    clearError();
+    el.nativeCameraInput.click();
+  });
+
+  el.nativeCameraInput.addEventListener("change", async () => {
+    const file = el.nativeCameraInput.files && el.nativeCameraInput.files[0];
+    if (!file) return;
+    try {
+      if (!file.type.startsWith("image/")) throw new Error("Tệp vừa chọn không phải ảnh.");
+      const bitmap = await createImageBitmap(file);
+      const canvas = canvasFromSource(bitmap, bitmap.width, bitmap.height);
+      if (typeof bitmap.close === "function") bitmap.close();
+      el.nativeCaptureControls.hidden = true;
+      el.startControls.hidden = true;
+      await processPhoto(canvas, estimateScene(canvas));
+    } catch (err) {
+      showError(err instanceof Error ? err.message : "Không đọc được ảnh từ camera điện thoại.");
+      el.nativeCaptureControls.hidden = false;
+    } finally {
+      el.nativeCameraInput.value = "";
+    }
   });
 
   el.downloadBtn.addEventListener("click", () => {

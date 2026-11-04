@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#153f34">
   <meta name="description" content="Dấu ấn Áo xanh — Check-in AI của Chi đoàn Trường Tiểu học Minh Khương.">
   <title>Dấu ấn Áo xanh | Check-in AI Minh Khương</title>
-  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/styles.css?v=20261104-camera-fix2">
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/selfie_segmentation.js" crossorigin="anonymous" defer></script>
 </head>
 <body>
@@ -60,8 +60,12 @@
       </div>
 
       <div class="controls" id="startControls">
-        <button class="btn primary" id="startBtn" disabled>✦ MỞ CAMERA & BẮT ĐẦU</button>
+        <button class="btn primary" id="startBtn" disabled>✦ MỞ CAMERA SAU & BẮT ĐẦU</button>
       </div>
+      <div class="controls native-camera-controls" id="nativeCaptureControls" hidden>
+        <button class="btn secondary" id="nativeCaptureBtn" type="button">MỞ CAMERA ĐIỆN THOẠI (DỰ PHÒNG)</button>
+      </div>
+      <input id="nativeCameraInput" type="file" accept="image/*" capture="environment" hidden>
       <div class="controls camera-controls" id="cameraControls" hidden>
         <button class="btn secondary switch-btn" id="switchBtn" type="button" aria-label="Đổi camera">↻</button>
         <button class="btn primary" id="captureBtn" type="button">CHỤP ẢNH & GHÉP NỀN</button>
@@ -97,6 +101,6 @@
       <small class="credits">Tách người: MediaPipe Selfie Segmentation. Tạo nền AI: FLUX.1 Schnell. Ảnh dự phòng thật từ Pexels khi AI tạm bận.</small>
     </footer>
   </main>
-  <script src="/assets/app.js" defer></script>
+  <script src="/assets/app.js?v=20261104-camera-fix2" defer></script>
 </body>
 </html>
