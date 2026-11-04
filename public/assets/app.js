@@ -467,19 +467,31 @@
     setProgress(8, "ĐANG CHUẨN BỊ ẢNH", "Đang chuẩn bị gửi ảnh tới AI…", "Ảnh được nén trên thiết bị trước khi gửi theo chấp thuận của bạn.");
     try {
       const sourceCanvas = await imageFileToCanvas(file);
-      const crop = cropToPortrait(sourceCanvas.width, sourceCanvas.height);
+      // FLUX.2 Klein 4B multi-reference inputs must each be smaller than 512x512.
+      // Keep the entire source photo visible instead of cutting off the person's head or feet.
       const uploadCanvas = document.createElement("canvas");
-      uploadCanvas.width = 1024;
-      uploadCanvas.height = 1280;
+      uploadCanvas.width = 400;
+      uploadCanvas.height = 500;
       const uploadCtx = uploadCanvas.getContext("2d");
-      uploadCtx.drawImage(sourceCanvas, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, uploadCanvas.width, uploadCanvas.height);
+      uploadCtx.fillStyle = "#e8e8e5";
+      uploadCtx.fillRect(0, 0, uploadCanvas.width, uploadCanvas.height);
+      const containScale = Math.min(uploadCanvas.width / sourceCanvas.width, uploadCanvas.height / sourceCanvas.height);
+      const containedWidth = sourceCanvas.width * containScale;
+      const containedHeight = sourceCanvas.height * containScale;
+      uploadCtx.drawImage(
+        sourceCanvas,
+        (uploadCanvas.width - containedWidth) / 2,
+        (uploadCanvas.height - containedHeight) / 2,
+        containedWidth,
+        containedHeight
+      );
       const dataUrl = uploadCanvas.toDataURL("image/jpeg", 0.88);
       const imageBase64 = dataUrl.slice(dataUrl.indexOf(",") + 1);
-      if (!imageBase64 || imageBase64.length > 7_500_000) {
-        throw new Error("Ảnh quá lớn để gửi tới AI. Vui lòng chụp lại với độ phân giải thấp hơn.");
+      if (!imageBase64 || imageBase64.length > 1_500_000) {
+        throw new Error("Không thể chuẩn bị ảnh để gửi tới AI. Vui lòng chụp lại.");
       }
 
-      setProgress(32, "ĐANG GỬI ẢNH ĐÃ ĐƯỢC CHẤP THUẬN", "AI đang tiếp nhận ảnh…", "Ảnh gốc được gửi tới Cloudflare AI để chỉnh sửa bằng FLUX.2 Klein 4B trong hạn mức miễn phí hằng ngày.");
+      setProgress(32, "ĐANG GỬI ẢNH ĐÃ ĐƯỢC CHẤP THUẬN", "AI đang tiếp nhận ảnh…", "Ảnh gốc được gửi tới Cloudflare AI để chỉnh sửa bằng FLUX.2 Klein 4B trong hạn mức miễn phí 10.000 neurons/ngày. Ảnh tham chiếu được gửi ở kích thước tối ưu cho xử lý.");
       const response = await fetch("/api/ai-edit", {
         method: "POST",
         headers: { "content-type": "application/json" },
