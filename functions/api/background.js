@@ -2,8 +2,6 @@ const WINDOW_MS = 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 30;
 const requestCounts = new Map();
 const backgroundGenerationPromises = new Map();
-const DAILY_VARIANTS_PER_SCENE = 4;
-const DAILY_POOL_TTL_SECONDS = 48 * 60 * 60;
 
 const BACKGROUNDS = {
   "rice-gold": {
