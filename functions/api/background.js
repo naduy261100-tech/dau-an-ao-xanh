@@ -207,7 +207,7 @@ export async function onRequestPost({ request, env }) {
       "x-background-cache": "not-cached",
       "x-background-attribution": "",
       "x-background-title": selected.title,
-      "x-background-seed": String(seed),
+      "x-background-request-id": String(seed),
       "x-background-model": "FLUX.1-Schnell-4-steps",
       "x-background-size": "model-native-square",
       "content-disposition": "inline; filename=\"dau-an-ao-xanh-ai-background.jpg\""
@@ -217,10 +217,12 @@ export async function onRequestPost({ request, env }) {
   let generation = backgroundGenerationPromises.get(requestKey);
   if (!generation) {
     generation = (async () => {
+      // FLUX.1 Schnell's live schema accepts only prompt and steps.
+      // Keep the browser's random seed only as an internal request key; do not
+      // send it as a model parameter.
       const result = await env.AI.run("@cf/black-forest-labs/flux-1-schnell", {
         prompt,
-        steps: 4,
-        seed
+        steps: 4
       });
       if (!result || typeof result.image !== "string" || !result.image) {
         throw new Error("model-returned-no-image");
