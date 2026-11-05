@@ -39,6 +39,116 @@ button,input { font: inherit; } button { -webkit-tap-highlight-color: transparen
 .hero-copy h2 { margin:12px 0 8px; color:#18382a; font-size:clamp(28px,6vw,38px); line-height:1.1; font-weight:820; letter-spacing:-.055em; }
 .hero-copy h2 span { color:var(--green); }
 .hero-copy p { max-width:580px; margin:0; color:#6d7a73; font-size:13px; line-height:1.7; }
+/* Dedicated 20 November check-in section */
+.teacher-day-picker {
+  margin: 0 0 13px;
+  padding: 16px;
+  border: 1px solid #f0d4df;
+  border-radius: 17px;
+  background: linear-gradient(145deg,#fffaf8 0%,#fff 58%,#f7fbff 100%);
+  box-shadow: var(--shadow);
+}
+.teacher-day-heading {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+}
+.teacher-day-heading-copy { min-width:0; }
+.teacher-day-kicker {
+  color:#b34d67;
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.15em;
+}
+.teacher-day-heading h3 {
+  margin:4px 0 0;
+  color:#713148;
+  font-size:19px;
+  letter-spacing:-.035em;
+}
+.teacher-day-heading p {
+  max-width:490px;
+  margin:5px 0 0;
+  color:#81727a;
+  font-size:10px;
+  line-height:1.5;
+}
+.teacher-day-date {
+  flex:0 0 auto;
+  display:grid;
+  place-items:center;
+  width:52px;
+  height:52px;
+  border:1px solid #f1c8d4;
+  border-radius:15px;
+  background:#fff1f4;
+  color:#c33155;
+  font-size:15px;
+  font-weight:950;
+  box-shadow:inset 0 0 0 3px #fff;
+}
+.teacher-day-grid { display:grid; grid-template-columns:minmax(0,1fr); }
+.teacher-day-card {
+  width:100%;
+  min-width:0;
+  padding:0 0 10px;
+  overflow:hidden;
+  border:1.5px solid #eed8df;
+  border-radius:13px;
+  background:#fff;
+  color:inherit;
+  text-align:left;
+  cursor:pointer;
+  transition:border-color .15s,box-shadow .15s,transform .15s;
+}
+.teacher-day-card:active { transform:scale(.992); }
+.teacher-day-card.is-selected {
+  border-color:#b43e5b;
+  box-shadow:0 0 0 2px rgba(180,62,91,.12),0 7px 20px rgba(113,49,72,.09);
+}
+.teacher-day-thumb {
+  position:relative;
+  display:block;
+  width:100%;
+  aspect-ratio:1.32/1;
+  overflow:hidden;
+  background:#f2eee4;
+}
+.teacher-day-thumb img {
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  transition:transform .2s;
+}
+.teacher-day-card.is-selected .teacher-day-thumb img { transform:scale(1.012); }
+.teacher-day-badge {
+  position:absolute;
+  left:9px;
+  top:9px;
+  padding:6px 8px;
+  border:1px solid rgba(255,255,255,.8);
+  border-radius:20px;
+  background:rgba(177,45,80,.92);
+  color:#fff;
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.06em;
+  box-shadow:0 2px 8px rgba(60,20,30,.15);
+}
+.teacher-day-thumb .scene-tick { top:9px; right:9px; }
+.teacher-day-card-copy { display:block; padding-top:2px; }
+.teacher-day-card .scene-name { padding:9px 11px 0; color:#713148; font-size:11px; }
+.teacher-day-card .scene-subtitle { padding:3px 11px 0; color:#8a7880; font-size:9px; }
+.teacher-day-note {
+  margin:10px 1px 0;
+  color:#8a747e;
+  font-size:9px;
+  line-height:1.55;
+}
+
 .background-picker { padding:17px; border:1px solid var(--line); border-radius:17px; background:#fff; box-shadow:var(--shadow); }
 .picker-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:13px; }
 .picker-kicker { color:#7b8a80; font-size:8px; font-weight:850; letter-spacing:.13em; }
