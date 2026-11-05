@@ -422,7 +422,7 @@
       bitmap,
       source: response.headers.get("x-background-source") || "photo-fallback",
       attribution: response.headers.get("x-background-attribution") || "",
-      seed: response.headers.get("x-background-seed") || "",
+      requestId: response.headers.get("x-background-request-id") || "",
       variant: response.headers.get("x-background-pool-variant") || "",
       cacheStatus: response.headers.get("x-background-cache") || "",
       model: response.headers.get("x-background-model") || ""
