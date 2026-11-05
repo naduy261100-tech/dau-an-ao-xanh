@@ -18,7 +18,7 @@ jobs:
         run: |
           set -euo pipefail
           url="https://dau-an-ao-xanh.naduy261100.workers.dev/api/background"
-          body='{"scene":"wood-bridge","mode":"ai-background","seed":202611051028,"framing":"full-body","light":{"brightness":0.52,"warmth":0}}'
+          body='{"scene":"wood-bridge","mode":"ai-background","seed":202611051100,"framing":"full-body","light":{"brightness":0.52,"warmth":0}}'
           headers="$RUNNER_TEMP/headers.txt"
           output="$RUNNER_TEMP/background.jpg"
           status="$(curl --silent --show-error --max-time 180 -X POST "$url" -H "Content-Type: application/json" --data "$body" -D "$headers" -o "$output" -w "%{http_code}")"
