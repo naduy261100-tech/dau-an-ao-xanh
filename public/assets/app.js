@@ -420,7 +420,9 @@
       bitmap,
       source: response.headers.get("x-background-source") || "photo-fallback",
       attribution: response.headers.get("x-background-attribution") || "",
-      seed: response.headers.get("x-background-seed") || ""
+      seed: response.headers.get("x-background-seed") || "",
+      variant: response.headers.get("x-background-pool-variant") || "",
+      cacheStatus: response.headers.get("x-background-cache") || ""
     };
   }
 
@@ -530,8 +532,8 @@
       el.resultImage.src = resultUrl;
       const scene = SCENES[selectedScene];
       if (background.source === "flux-ai") {
-        el.resultDescription.textContent = "AI đã tạo mới phong cảnh cho lượt này. Người trong ảnh được lấy trực tiếp từ ảnh gốc và ghép trên thiết bị; ảnh người không được gửi lên AI." + (person.framing === "portrait" ? " Ảnh gốc là chân dung/bán thân nên bố cục được thu nhỏ theo kiểu chân dung, không tự tạo thêm phần cơ thể bị khuất." : "");
-        el.resultMeta.textContent = "Nền AI tạo mới · " + scene.title + " · " + (person.matteModel || "Alpha matting trên thiết bị") + " · " + (person.framing === "full-body" ? "Toàn thân" : "Chân dung/bán thân") + " · Giữ khuôn mặt gốc";
+        el.resultDescription.textContent = "Phông nền được AI tạo mới trong ngày và luân phiên sử dụng để phục vụ nhiều lượt ghép. Người trong ảnh được lấy trực tiếp từ ảnh gốc và ghép trên thiết bị; ảnh người không được gửi lên AI." + (person.framing === "portrait" ? " Ảnh gốc là chân dung/bán thân nên bố cục được thu nhỏ theo kiểu chân dung, không tự tạo thêm phần cơ thể bị khuất." : "");
+        el.resultMeta.textContent = "Nền AI trong kho hôm nay · " + scene.title + " · Biến thể " + (background.variant || "") + " · " + (person.matteModel || "Alpha matting trên thiết bị") + " · " + (person.framing === "full-body" ? "Toàn thân" : "Chân dung/bán thân") + " · Giữ khuôn mặt gốc";
       } else {
         el.resultDescription.textContent = "Người trong ảnh được giữ trực tiếp từ ảnh gốc và ghép với ảnh phong cảnh trong thư viện trên thiết bị." + (person.framing === "portrait" ? " Ảnh gốc là chân dung/bán thân nên bố cục được thu nhỏ theo kiểu chân dung, không tự tạo thêm phần cơ thể bị khuất." : "");
         el.resultMeta.textContent = "Nền thư viện · " + scene.title + " · " + (person.matteModel || "Alpha matting trên thiết bị") + " · " + (person.framing === "full-body" ? "Toàn thân" : "Chân dung/bán thân") + " · Giữ khuôn mặt gốc" + (background.attribution ? " · " + background.attribution : "");

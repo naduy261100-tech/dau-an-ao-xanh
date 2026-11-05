@@ -1,6 +1,9 @@
 const WINDOW_MS = 60 * 1000;
 const MAX_REQUESTS_PER_WINDOW = 30;
 const requestCounts = new Map();
+const backgroundGenerationPromises = new Map();
+const DAILY_VARIANTS_PER_SCENE = 4;
+const DAILY_POOL_TTL_SECONDS = 48 * 60 * 60;
 
 const BACKGROUNDS = {
   "rice-gold": {
@@ -189,45 +192,92 @@ export async function onRequestPost({ request, env }) {
     "Photographic truth is mandatory: it must look like an unretouched real travel photograph captured on location by a professional documentary photographer, not an illustration, not concept art, not an architectural visualization, not a 3D render, not a painting, not plastic-looking AI art. Use realistic imperfect natural details, plausible optics, fine real-world textures, natural contrast and restrained saturation."
   ].join(" ");
 
-  try {
-    const form = new FormData();
-    form.set("prompt", prompt);
-    form.set("width", "1024");
-    form.set("height", "1280");
-    form.set("seed", String(seed));
-    const serialized = new Response(form);
-    const result = await env.AI.run("@cf/black-forest-labs/flux-2-klein-4b", {
-      multipart: {
-        body: serialized.body,
-        contentType: serialized.headers.get("content-type")
-      }
-    });
-    if (!result || typeof result.image !== "string" || !result.image) {
-      throw new Error("model-returned-no-image");
-    }
-    const binary = atob(result.image);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    if (bytes.length < 10000) throw new Error("model-image-too-small");
+  // Daily AI pool: 11 scene families x 4 generated variants = 44
+  // unique backgrounds/day. The 44 images are reused across approximately
+  // 100 on-device person composites, keeping daily inference under 10,000
+  // free Neurons while retaining 1024x1280 background quality.
+  if (!env.BG_CACHE || typeof env.BG_CACHE.get !== "function" || typeof env.BG_CACHE.put !== "function") {
+    return json({
+      message: "Kho phông nền AI chưa được kết nối. Ảnh người vẫn an toàn trên thiết bị; vui lòng chọn nền thư viện tạm thời.",
+      errorCode: "AI_BACKGROUND_CACHE_NOT_CONFIGURED"
+    }, 503);
+  }
 
-    return new Response(bytes, {
-      status: 200,
-      headers: {
-        "content-type": "image/jpeg",
-        "cache-control": "no-store, private, max-age=0",
-        "x-content-type-options": "nosniff",
-        "x-background-source": "flux-ai",
-        "x-background-attribution": "",
-        "x-background-title": selected.title,
-        "x-background-seed": String(seed),
-        "x-background-model": "FLUX.2-Klein-4B",
-        "content-disposition": "inline; filename=\"dau-an-ao-xanh-ai-background.jpg\""
+  const utcDay = new Date().toISOString().slice(0, 10);
+  const variant = seed % DAILY_VARIANTS_PER_SCENE;
+  const cacheKey = `ai-bg-pool-v1:${utcDay}:${sceneId}:${variant}`;
+
+  const makeResponse = (bytes, cacheStatus) => new Response(bytes, {
+    status: 200,
+    headers: {
+      "content-type": "image/jpeg",
+      "cache-control": "no-store, private, max-age=0",
+      "x-content-type-options": "nosniff",
+      "x-background-source": "flux-ai",
+      "x-background-cache": cacheStatus,
+      "x-background-pool-size": String(Object.keys(BACKGROUNDS).length * DAILY_VARIANTS_PER_SCENE),
+      "x-background-pool-variant": String(variant + 1),
+      "x-background-attribution": "",
+      "x-background-title": selected.title,
+      "x-background-seed": String(seed),
+      "x-background-model": "FLUX.2-Klein-4B",
+      "content-disposition": "inline; filename=\"dau-an-ao-xanh-ai-background.jpg\""
+    }
+  });
+
+  try {
+    const cached = await env.BG_CACHE.get(cacheKey, "arrayBuffer");
+    if (cached) return makeResponse(cached, "hit");
+  } catch (error) {
+    console.error("AI background pool cache read failed:", error instanceof Error ? error.message : String(error));
+    return json({
+      message: "Không đọc được kho phông nền AI trong ngày. Để bảo vệ hạn mức miễn phí, ứng dụng tạm dừng tạo nền mới; vui lòng chọn nền thư viện.",
+      errorCode: "AI_BACKGROUND_CACHE_READ_FAILED"
+    }, 503);
+  }
+
+  let generation = backgroundGenerationPromises.get(cacheKey);
+  if (!generation) {
+    generation = (async () => {
+      if (!env.AI || typeof env.AI.run !== "function") {
+        throw new Error("AI binding is not available");
       }
-    });
+      const form = new FormData();
+      form.set("prompt", prompt);
+      form.set("width", "1024");
+      form.set("height", "1280");
+      form.set("seed", String(seed));
+      const serialized = new Response(form);
+      const result = await env.AI.run("@cf/black-forest-labs/flux-2-klein-4b", {
+        multipart: {
+          body: serialized.body,
+          contentType: serialized.headers.get("content-type")
+        }
+      });
+      if (!result || typeof result.image !== "string" || !result.image) {
+        throw new Error("model-returned-no-image");
+      }
+      const binary = atob(result.image);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      if (bytes.length < 10000) throw new Error("model-image-too-small");
+
+      // Save the landscape before returning it so the next visitor reuses it.
+      await env.BG_CACHE.put(cacheKey, bytes, {
+        expirationTtl: DAILY_POOL_TTL_SECONDS
+      });
+      return bytes;
+    })();
+    backgroundGenerationPromises.set(cacheKey, generation);
+  }
+
+  try {
+    const bytes = await generation;
+    return makeResponse(bytes, "generated");
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error || "unknown-error");
     const normalized = detail.toLowerCase();
-    console.error("FLUX.2 Klein 4B background generation failed:", detail.slice(0, 500));
+    console.error("AI background pool generation failed:", detail.slice(0, 500));
     const dailyQuotaExhausted =
       normalized.includes("4006") ||
       normalized.includes("daily free allocation") ||
@@ -239,10 +289,20 @@ export async function onRequestPost({ request, env }) {
         retryAt: "00:00 UTC"
       }, 429);
     }
+    if (normalized.includes("kv") || normalized.includes("storage")) {
+      return json({
+        message: "AI đã không thể lưu phông nền vào kho dùng chung. Để tránh tiêu hao thêm hạn mức miễn phí, ứng dụng tạm dừng tạo nền mới; vui lòng dùng nền thư viện hoặc thử lại sau.",
+        errorCode: "AI_BACKGROUND_POOL_STORE_FAILED"
+      }, 503);
+    }
     return json({
       message: "Dịch vụ tạo phông nền AI đang gặp lỗi từ mô hình. Vui lòng thử lại sau hoặc chọn “Dùng nền thư viện có sẵn”. Ảnh người vẫn chưa được gửi lên AI.",
       errorCode: "AI_BACKGROUND_GENERATION_FAILED",
       providerDetail: detail.slice(0, 160)
     }, 503);
+  } finally {
+    if (backgroundGenerationPromises.get(cacheKey) === generation) {
+      backgroundGenerationPromises.delete(cacheKey);
+    }
   }
 }

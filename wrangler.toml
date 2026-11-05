@@ -9,3 +9,7 @@ run_worker_first = true
 
 [ai]
 binding = "AI"
+
+[[kv_namespaces]]
+binding = "BG_CACHE"
+id = "fd5cef6f4bb9485d8d890ec0c5cdf80c"

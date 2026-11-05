@@ -1,15 +1,21 @@
 export async function onRequestGet({ env }) {
-  const ready = Boolean(env.AI && typeof env.AI.run === "function");
+  const aiReady = Boolean(env.AI && typeof env.AI.run === "function");
+  const cacheReady = Boolean(env.BG_CACHE && typeof env.BG_CACHE.get === "function" && typeof env.BG_CACHE.put === "function");
   return new Response(JSON.stringify({
-    ready,
-    mode: ready ? "private-and-free-daily-ai-edit" : "locked",
-    service: "Dau an Ao xanh - private on-device composition and optional free daily AI image editing",
-    privateMode: "The original photo stays in the browser and is not uploaded.",
-    aiEditMode: "After separate consent, the photo and selected landscape reference are sent to Cloudflare Workers AI FLUX.2 Klein 4B.",
-    aiEditModel: "@cf/black-forest-labs/flux-2-klein-4b",
+    ready: aiReady && cacheReady,
+    mode: aiReady && cacheReady ? "daily-ai-background-pool" : "locked",
+    service: "Dau an Ao xanh - on-device person matting with a daily AI landscape pool",
+    privateMode: "Original person pixels and alpha matte stay in the browser and are never uploaded.",
+    backgroundModel: "@cf/black-forest-labs/flux-2-klein-4b",
+    backgroundSize: "1024x1280",
+    dailyPoolVariants: 44,
+    poolDesign: "11 scenery themes x 4 AI-generated variants per UTC day; cached landscape backgrounds are reused to serve about 100 local photo composites.",
+    estimatedNeuronsPerNewBackground: 156.3,
+    estimatedDailyNeuronsAtFullPool: 6877.2,
     dailyFreeNeuronAllocation: 10000,
-    estimatedNeuronsPerAiEditAtCurrentDimensions: 115,
-    estimatedAiEditsWithinQuota: 50,
+    backgroundCacheReady: cacheReady,
+    cacheProvider: "Cloudflare Workers KV",
+    maxPhotoCompositesTargetPerDay: 100,
     noAutomaticPaidFallback: true
   }), {
     status: 200,

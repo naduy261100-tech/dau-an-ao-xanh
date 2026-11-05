@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
 <title>Thông tin xử lý ảnh | Dấu ấn Áo xanh</title>
-<link rel="stylesheet" href="/assets/styles.css?v=20261104-longpipe-xl-matting-v4">
+<link rel="stylesheet" href="/assets/styles.css?v=20261105-ai-pool-44">
 <style>
 .policy{max-width:760px;margin:22px auto;padding:clamp(20px,5vw,34px);background:#fff;border:1px solid #e3ebe5;border-radius:18px;box-shadow:0 18px 50px rgba(20,47,34,.07)}
 .policy-kicker{color:#08794f;font-size:10px;font-weight:850;letter-spacing:.13em}
@@ -29,7 +29,7 @@
 <li>Camera điện thoại hoặc công cụ tải ảnh lên cung cấp ảnh gốc cho trình duyệt.</li>
 <li>Mô hình alpha matting Longpipe XL (1280 × 768) chạy hoàn toàn trên điện thoại/máy tính bằng WebGPU hoặc WebGL; máy yếu có thể dùng Longpipe Large (640 × 400). Mô hình tạo mặt nạ trong suốt cho tóc, vai và cơ thể. Điểm ảnh RGB của người được lấy lại từ ảnh gốc, không gửi ảnh lên máy chủ.</li>
 <li>Ảnh gốc được phân đoạn hoàn toàn trên thiết bị. Trình duyệt chỉ gửi mã chủ đề, kiểu bố cục (chân dung/toàn thân), seed ngẫu nhiên và hai chỉ số tổng quát về độ sáng/nhiệt màu trung bình của chủ thể để tạo nền có ánh sáng gần hơn. Không gửi ảnh người, khuôn mặt, dữ liệu điểm ảnh hoặc mặt nạ tách nền.</li>
-<li>Cloudflare Workers AI dùng FLUX.2 Klein 4B để tạo một ảnh phong cảnh mới từ mô tả, với bố cục và sắc độ tham chiếu theo các chỉ số tổng quát đã tính trên thiết bị. Mỗi lượt ghép có seed riêng để tạo biến thể mới.</li>
+<li>Cloudflare Workers AI dùng FLUX.2 Klein 4B để tạo tối đa 44 phong cảnh mới mỗi ngày (11 chủ đề × 4 biến thể). Các ảnh nền AI được lưu tạm trong Cloudflare Workers KV và luân phiên sử dụng lại để phục vụ khoảng 100 lượt ghép/ngày. Kho nền tự hết hạn sau 48 giờ. KV chỉ lưu ảnh phong cảnh không có người; không lưu ảnh người, khuôn mặt hoặc mặt nạ.</li>
 <li>Ảnh người được ghép với nền AI ngay trên thiết bị bằng Canvas. Mô hình tạo nền không nhìn thấy ảnh người và không vẽ lại khuôn mặt.</li>
 </ol>
 <p>Ảnh cá nhân ở lại trong bộ nhớ của trình duyệt khi phiên làm việc đang mở. Trình duyệt chỉ tải trọng số mô hình Longpipe từ CDN Katana Video (lần đầu khoảng 14,5 MB, sau đó được lưu bộ nhớ đệm). Ảnh gốc và mặt nạ alpha được xử lý tại thiết bị; website không tải ảnh người lên máy chủ, không lưu ảnh vào tài khoản, thư viện, cơ sở dữ liệu, KV, R2 hoặc ổ đĩa. Ảnh gốc được thu phóng và nén JPEG khi xuất, nhưng không được đưa qua mô hình tạo sinh.</p>
@@ -43,7 +43,7 @@
 <p>Chế độ này là phương án dự phòng khi AI tạo nền bận hoặc khi người dùng muốn dùng một phong cảnh cố định. Ảnh người vẫn được giữ từ ảnh gốc.</p>
 
 <h2>3. Hạn mức tạo nền AI</h2>
-<p>Cloudflare Workers AI cung cấp 10.000 neurons miễn phí mỗi ngày cho tài khoản Workers Free. Ứng dụng dùng FLUX.2 Klein 4B, tạo ảnh 1024 × 1280 px theo cơ chế 4 bước cố định. Mức tiêu thụ tính theo megapixel đầu ra; lượng sử dụng thực tế còn phụ thuộc tác vụ AI khác dùng chung tài khoản.</p>
+<p>Cloudflare Workers AI cung cấp 10.000 neurons miễn phí mỗi ngày cho tài khoản Workers Free. Một ảnh nền FLUX.2 Klein 4B ở kích thước 1024 × 1280 px tiêu thụ khoảng 156,3 Neurons theo bảng giá hiện hành. Kho tối đa 44 ảnh nền/ngày dự kiến dùng khoảng 6.877 Neurons, để lại phần đệm cho dao động và tác vụ khác. Mỗi ảnh nền có thể được dùng lại cho nhiều ảnh người; số lượt ghép thực tế phụ thuộc lượng nền đã tạo và số người dùng. Ứng dụng không tự nâng cấp hay phát sinh phí.</p>
 <p>Hạn mức làm mới lúc 00:00 UTC. Khi hết hạn mức hoặc mô hình tạm thời không sẵn sàng, ứng dụng sẽ báo lỗi và không tự chuyển sang dịch vụ trả phí. Người dùng có thể thử lại hoặc tự chọn chế độ nền thư viện.</p>
 
 <h2>3. Phông nền và nguồn ảnh</h2>
