@@ -183,76 +183,44 @@ export async function onRequestPost({ request, env }) {
     : "CRITICAL COMPOSITION: the lower 30 percent must contain a broad, continuous, clearly visible, dry, level standing surface matching the scene (path, paved lane, stone courtyard, bridge deck or dry viewing platform). The surface must extend to the bottom edge and have enough open area for one full-length person to be composited later. Keep the horizon and main scenery in the upper half. Leave an uncluttered central foreground standing area. Show realistic ground texture and a natural light direction. No steep aerial or drone viewpoint.";
   const prompt = [
     selected.prompt,
-    "Create a completely new original landscape photograph for this request, not a copy of a stock photo.",
-    "Premium high-detail professional real-camera travel photography, crisp natural textures and fine detail, vertical portrait composition, full-frame camera, natural 35mm lens, camera at a standing person's eye level, believable human-scale perspective, realistic dynamic range, clean sharp focus, physically plausible natural light.",
+    "Create an original, highly photorealistic documentary travel photograph in a natural northern Vietnam setting. Premium real-camera quality, realistic fine textures, physically plausible perspective, natural 35mm lens, camera at ordinary human eye level, crisp but not artificially sharpened.",
     compositionPrompt,
     lighting,
-    "Keep greens and other colors naturally saturated, with realistic highlight roll-off, restrained local contrast and camera-like dynamic range; avoid excessive HDR, neon colors or artificial sharpness.",
-    "Do not include any people, human silhouettes, faces, statues, mannequins, animals, signs, letters, captions, logos, borders or watermarks. Water is background scenery only and must never occupy the standing area.",
-    "Photographic truth is mandatory: it must look like an unretouched real travel photograph captured on location by a professional documentary photographer, not an illustration, not concept art, not an architectural visualization, not a 3D render, not a painting, not plastic-looking AI art. Use realistic imperfect natural details, plausible optics, fine real-world textures, natural contrast and restrained saturation."
-  ].join(" ");
+    "Use believable real-world colors, restrained contrast, natural greens, realistic highlights and shadows. The scene must look like a genuine photograph taken on location, never an illustration, painting, 3D render or glossy AI artwork.",
+    "No people, human silhouettes, faces, statues, mannequins, animals, signs, letters, captions, logos or watermarks. Keep water away from the standing area."
+  ].join(" ").slice(0, 2048);
 
-  // Daily AI pool: 11 scene families x 4 generated variants = 44
-  // unique backgrounds/day. The 44 images are reused across approximately
-  // 100 on-device person composites, keeping daily inference under 10,000
-  // free Neurons while retaining 1024x1280 background quality.
-  if (!env.BG_CACHE || typeof env.BG_CACHE.get !== "function" || typeof env.BG_CACHE.put !== "function") {
-    return json({
-      message: "Kho phông nền AI chưa được kết nối. Ảnh người vẫn an toàn trên thiết bị; vui lòng chọn nền thư viện tạm thời.",
-      errorCode: "AI_BACKGROUND_CACHE_NOT_CONFIGURED"
-    }, 503);
-  }
-
+  // Generate a fresh landscape for every photo composite.
+  // FLUX.1 Schnell uses its native square output; the browser crops it to
+  // the final 4:5 portrait canvas. Four steps balance realism, speed and
+  // the free daily Neuron allowance.
   const utcDay = new Date().toISOString().slice(0, 10);
-  const variant = seed % DAILY_VARIANTS_PER_SCENE;
-  const cacheKey = `ai-bg-pool-v1:${utcDay}:${sceneId}:${variant}`;
+  const requestKey = `${utcDay}:${sceneId}:${seed}:${framing}`;
 
-  const makeResponse = (bytes, cacheStatus) => new Response(bytes, {
+  const makeResponse = bytes => new Response(bytes, {
     status: 200,
     headers: {
       "content-type": "image/jpeg",
       "cache-control": "no-store, private, max-age=0",
       "x-content-type-options": "nosniff",
       "x-background-source": "flux-ai",
-      "x-background-cache": cacheStatus,
-      "x-background-pool-size": String(Object.keys(BACKGROUNDS).length * DAILY_VARIANTS_PER_SCENE),
-      "x-background-pool-variant": String(variant + 1),
+      "x-background-cache": "not-cached",
       "x-background-attribution": "",
       "x-background-title": selected.title,
       "x-background-seed": String(seed),
-      "x-background-model": "FLUX.2-Klein-4B",
+      "x-background-model": "FLUX.1-Schnell-4-steps",
+      "x-background-size": "model-native-square",
       "content-disposition": "inline; filename=\"dau-an-ao-xanh-ai-background.jpg\""
     }
   });
 
-  try {
-    const cached = await env.BG_CACHE.get(cacheKey, "arrayBuffer");
-    if (cached) return makeResponse(cached, "hit");
-  } catch (error) {
-    console.error("AI background pool cache read failed:", error instanceof Error ? error.message : String(error));
-    return json({
-      message: "Không đọc được kho phông nền AI trong ngày. Để bảo vệ hạn mức miễn phí, ứng dụng tạm dừng tạo nền mới; vui lòng chọn nền thư viện.",
-      errorCode: "AI_BACKGROUND_CACHE_READ_FAILED"
-    }, 503);
-  }
-
-  let generation = backgroundGenerationPromises.get(cacheKey);
+  let generation = backgroundGenerationPromises.get(requestKey);
   if (!generation) {
     generation = (async () => {
-      if (!env.AI || typeof env.AI.run !== "function") {
-        throw new Error("AI binding is not available");
-      }
-      const form = new FormData();
-      form.set("prompt", prompt);
-      form.set("width", "1024");
-      form.set("height", "1280");
-      form.set("seed", String(seed));
-      const serialized = new Response(form);
-      const result = await env.AI.run("@cf/black-forest-labs/flux-2-klein-4b", {
-        multipart: {
-          body: serialized.body,
-          contentType: serialized.headers.get("content-type")
-        }
+      const result = await env.AI.run("@cf/black-forest-labs/flux-1-schnell", {
+        prompt,
+        steps: 4,
+        seed
       });
       if (!result || typeof result.image !== "string" || !result.image) {
         throw new Error("model-returned-no-image");
@@ -261,48 +229,40 @@ export async function onRequestPost({ request, env }) {
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
       if (bytes.length < 10000) throw new Error("model-image-too-small");
-
-      // Save the landscape before returning it so the next visitor reuses it.
-      await env.BG_CACHE.put(cacheKey, bytes, {
-        expirationTtl: DAILY_POOL_TTL_SECONDS
-      });
       return bytes;
     })();
-    backgroundGenerationPromises.set(cacheKey, generation);
+    backgroundGenerationPromises.set(requestKey, generation);
   }
 
   try {
     const bytes = await generation;
-    return makeResponse(bytes, "generated");
+    return makeResponse(bytes);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error || "unknown-error");
     const normalized = detail.toLowerCase();
-    console.error("AI background pool generation failed:", detail.slice(0, 500));
+    console.error("AI background generation failed:", detail.slice(0, 500));
+
     const dailyQuotaExhausted =
       normalized.includes("4006") ||
       normalized.includes("daily free allocation") ||
-      normalized.includes("10,000 neurons");
+      normalized.includes("10,000 neurons") ||
+      normalized.includes("10000 neurons");
     if (dailyQuotaExhausted) {
       return json({
-        message: "Đã hết hạn mức AI miễn phí hôm nay của tài khoản Cloudflare (10.000 Neurons/ngày). Đây không phải lỗi ảnh chụp hay kết nối Internet. Hạn mức tự làm mới lúc 07:00 sáng giờ Việt Nam mỗi ngày. Trong lúc chờ, bạn có thể chọn “Dùng nền thư viện có sẵn” hoặc thử tạo nền AI lại sau giờ làm mới.",
+        message: "Cloudflare đang từ chối tạo ảnh do hạn mức Workers AI miễn phí trong ngày. Gói miễn phí không tự phát sinh thanh toán. Hạn mức theo lịch Cloudflare làm mới lúc 00:00 UTC (07:00 giờ Việt Nam). Nếu bảng điều khiển đã hiển thị còn Neurons mà yêu cầu vẫn bị từ chối, đây là trạng thái phía Cloudflare; ứng dụng không thể tự mở khóa. Ảnh người vẫn nằm trên thiết bị.",
         errorCode: "AI_DAILY_QUOTA_EXHAUSTED",
         retryAt: "00:00 UTC"
       }, 429);
     }
-    if (normalized.includes("kv") || normalized.includes("storage")) {
-      return json({
-        message: "AI đã không thể lưu phông nền vào kho dùng chung. Để tránh tiêu hao thêm hạn mức miễn phí, ứng dụng tạm dừng tạo nền mới; vui lòng dùng nền thư viện hoặc thử lại sau.",
-        errorCode: "AI_BACKGROUND_POOL_STORE_FAILED"
-      }, 503);
-    }
+
     return json({
-      message: "Dịch vụ tạo phông nền AI đang gặp lỗi từ mô hình. Vui lòng thử lại sau hoặc chọn “Dùng nền thư viện có sẵn”. Ảnh người vẫn chưa được gửi lên AI.",
+      message: "AI chưa tạo được phông nền lần này. Có thể mô hình đang bận hoặc kết nối tạm thời gián đoạn. Ảnh người vẫn an toàn trên thiết bị; vui lòng thử lại sau.",
       errorCode: "AI_BACKGROUND_GENERATION_FAILED",
       providerDetail: detail.slice(0, 160)
     }, 503);
   } finally {
-    if (backgroundGenerationPromises.get(cacheKey) === generation) {
-      backgroundGenerationPromises.delete(cacheKey);
+    if (backgroundGenerationPromises.get(requestKey) === generation) {
+      backgroundGenerationPromises.delete(requestKey);
     }
   }
 }
