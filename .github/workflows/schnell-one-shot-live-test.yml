@@ -1,0 +1,43 @@
+name: One-shot FLUX Schnell live smoke test
+
+on:
+  push:
+    branches:
+      - diagnostics/schnell-one-shot-live-test
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Send exactly one production AI generation request
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://dau-an-ao-xanh.naduy261100.workers.dev/api/background"
+          body='{"scene":"wood-bridge","mode":"ai-background","seed":202611051028,"framing":"full-body","light":{"brightness":0.52,"warmth":0}}'
+          headers="$RUNNER_TEMP/headers.txt"
+          output="$RUNNER_TEMP/background.jpg"
+          status="$(curl --silent --show-error --max-time 180 -X POST "$url" -H "Content-Type: application/json" --data "$body" -D "$headers" -o "$output" -w "%{http_code}")"
+          echo "HTTP_STATUS=$status"
+          echo "CONTENT_TYPE=$(grep -i '^content-type:' "$headers" | tail -1 | tr -d '\r')"
+          echo "BACKGROUND_SOURCE=$(grep -i '^x-background-source:' "$headers" | tail -1 | tr -d '\r')"
+          echo "BACKGROUND_MODEL=$(grep -i '^x-background-model:' "$headers" | tail -1 | tr -d '\r')"
+          echo "BACKGROUND_SEED=$(grep -i '^x-background-seed:' "$headers" | tail -1 | tr -d '\r')"
+          echo "IMAGE_BYTES=$(wc -c < "$output")"
+          if [ "$status" != "200" ]; then
+            echo "API_ERROR_RESPONSE:"
+            cat "$output"
+            exit 1
+          fi
+          test "$(file --brief --mime-type "$output")" = "image/jpeg"
+          python - "$output" <<'PY'
+          from PIL import Image
+          import sys
+          image = Image.open(sys.argv[1])
+          print(f"IMAGE_SIZE={image.width}x{image.height}")
+          print("LIVE_AI_GENERATION_PASS")
+          PY
