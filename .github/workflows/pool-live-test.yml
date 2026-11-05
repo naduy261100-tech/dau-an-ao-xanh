@@ -1,0 +1,49 @@
+name: Live AI pool diagnostic
+
+on:
+  push:
+    branches:
+      - diagnostics/pool-live-test-20261105
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test exactly one AI generation and one KV cache hit
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://dau-an-ao-xanh.naduy261100.workers.dev/api/background"
+          body='{"scene":"wood-bridge","mode":"ai-background","seed":20261105,"framing":"full-body","light":{"brightness":0.52,"warmth":0}}'
+          h1="$RUNNER_TEMP/pool-first.headers"
+          b1="$RUNNER_TEMP/pool-first.body"
+          s1="$(curl --silent --show-error --max-time 180 -X POST "$url" -H "Content-Type: application/json" --data "$body" -D "$h1" -o "$b1" -w "%{http_code}")"
+          echo "FIRST_STATUS=$s1"
+          echo "FIRST_CONTENT_TYPE=$(grep -i '^content-type:' "$h1" | tail -1 | tr -d '\r')"
+          echo "FIRST_SOURCE=$(grep -i '^x-background-source:' "$h1" | tail -1 | tr -d '\r')"
+          echo "FIRST_MODEL=$(grep -i '^x-background-model:' "$h1" | tail -1 | tr -d '\r')"
+          echo "FIRST_CACHE=$(grep -i '^x-background-cache:' "$h1" | tail -1 | tr -d '\r')"
+          echo "FIRST_VARIANT=$(grep -i '^x-background-pool-variant:' "$h1" | tail -1 | tr -d '\r')"
+          echo "FIRST_POOL_SIZE=$(grep -i '^x-background-pool-size:' "$h1" | tail -1 | tr -d '\r')"
+          echo "FIRST_BYTES=$(wc -c < "$b1")"
+          if [ "$s1" != "200" ]; then
+            echo "FIRST_ERROR_BODY:"
+            cat "$b1"
+            exit 1
+          fi
+          test "$(file --brief --mime-type "$b1")" = "image/jpeg"
+          s2headers="$RUNNER_TEMP/pool-second.headers"
+          b2="$RUNNER_TEMP/pool-second.body"
+          s2="$(curl --silent --show-error --max-time 60 -X POST "$url" -H "Content-Type: application/json" --data "$body" -D "$s2headers" -o "$b2" -w "%{http_code}")"
+          echo "SECOND_STATUS=$s2"
+          echo "SECOND_CONTENT_TYPE=$(grep -i '^content-type:' "$s2headers" | tail -1 | tr -d '\r')"
+          echo "SECOND_CACHE=$(grep -i '^x-background-cache:' "$s2headers" | tail -1 | tr -d '\r')"
+          echo "SECOND_BYTES=$(wc -c < "$b2")"
+          if [ "$s2" != "200" ]; then
+            echo "SECOND_ERROR_BODY:"
+            cat "$b2"
+            exit 1
+          fi
+          test "$(file --brief --mime-type "$b2")" = "image/jpeg"
+          grep -qi '^x-background-cache: hit' "$s2headers"
+          echo "PASS: first request generated one AI landscape and second request reused it from KV."
