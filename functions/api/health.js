@@ -1,22 +1,21 @@
 export async function onRequestGet({ env }) {
-  const aiReady = Boolean(env.AI && typeof env.AI.run === "function");
-  const cacheReady = Boolean(env.BG_CACHE && typeof env.BG_CACHE.get === "function" && typeof env.BG_CACHE.put === "function");
+  const aiBindingReady = Boolean(env.AI && typeof env.AI.run === "function");
   return new Response(JSON.stringify({
-    ready: aiReady && cacheReady,
-    mode: aiReady && cacheReady ? "daily-ai-background-pool" : "locked",
-    service: "Dau an Ao xanh - on-device person matting with a daily AI landscape pool",
+    ready: aiBindingReady,
+    mode: aiBindingReady ? "one-fresh-ai-background-per-shot" : "ai-binding-not-configured",
+    service: "Dau an Ao xanh - on-device person matting with per-shot AI landscape generation",
     privateMode: "Original person pixels and alpha matte stay in the browser and are never uploaded.",
-    backgroundModel: "@cf/black-forest-labs/flux-2-klein-4b",
-    backgroundSize: "1024x1280",
-    dailyPoolVariants: 44,
-    poolDesign: "11 scenery themes x 4 AI-generated variants per UTC day; cached landscape backgrounds are reused to serve about 100 local photo composites.",
-    estimatedNeuronsPerNewBackground: 156.3,
-    estimatedDailyNeuronsAtFullPool: 6877.2,
+    backgroundModel: "@cf/black-forest-labs/flux-1-schnell",
+    backgroundSteps: 4,
+    backgroundOutput: "Native model output; browser crops to 4:5 portrait",
+    estimatedNeuronsPerNewBackground: 57.6,
+    estimatedNeuronsFor100Backgrounds: 5760,
     dailyFreeNeuronAllocation: 10000,
-    backgroundCacheReady: cacheReady,
-    cacheProvider: "Cloudflare Workers KV",
     maxPhotoCompositesTargetPerDay: 100,
-    noAutomaticPaidFallback: true
+    backgroundCacheRequired: false,
+    noAutomaticPaidFallback: true,
+    quotaStatus: "not-probed",
+    healthNote: "This endpoint confirms that the AI binding is configured. It does not call the model, spend Neurons, or guarantee that Cloudflare's daily quota is currently available."
   }), {
     status: 200,
     headers: {
