@@ -6,6 +6,7 @@
     consentCheck: $("consentCheck"),
     agreeButton: $("agreeButton"),
     sceneGrid: $("sceneGrid"),
+    teacherDayGrid: $("teacherDayGrid"),
     modeOptions: document.querySelectorAll("[data-mode]"),
     modeDisclaimer: $("modeDisclaimer"),
     privacyTitle: $("privacyTitle"),
@@ -50,7 +51,8 @@
     "garden-walk": { title: "Lối vườn xanh", author: "nhavantuonglai / Pexels" },
     "traditional-garden": { title: "Vườn nhà gỗ", author: "juliber Tran / Pexels" },
     "flower-garden": { title: "Vườn hoa rực rỡ", author: "Nguyễn Tiến Thịnh / Pexels" },
-    "waterfall": { title: "Thác rừng trên bậc đá", author: "Pexels" }
+    "waterfall": { title: "Thác rừng trên bậc đá", author: "Pexels" },
+    "teacher-day-20-11": { title: "Cổng tri ân ngày 20/11", author: "Phông nền Trường Tiểu học Minh Khương" }
   };
 
   let selectedScene = "rice-gold";
@@ -124,6 +126,7 @@
 
   function selectMode(mode) {
     if (mode !== "ai-background" && mode !== "library") return;
+    if (selectedScene === "teacher-day-20-11" && mode === "ai-background") mode = "library";
     selectedMode = mode;
     for (const button of el.modeOptions) {
       const active = button.dataset.mode === mode;
@@ -149,11 +152,13 @@
   function selectScene(id) {
     if (!SCENES[id]) return;
     selectedScene = id;
-    for (const button of el.sceneGrid.querySelectorAll("[data-scene]")) {
+    for (const button of document.querySelectorAll("[data-scene]")) {
       const active = button.dataset.scene === id;
       button.classList.toggle("is-selected", active);
       button.setAttribute("aria-pressed", active ? "true" : "false");
     }
+    // The 20/11 arch is a fixed school backdrop, not an AI-generated landscape.
+    if (id === "teacher-day-20-11" && selectedMode !== "library") selectMode("library");
     clearError();
   }
 
@@ -400,6 +405,21 @@
   }
 
   async function generateBackground(scene, mode, framing, light) {
+    if (scene === "teacher-day-20-11") {
+      const response = await fetch("/assets/teacher-day-20-11.webp", { cache: "force-cache" });
+      if (!response.ok) throw new Error("Chưa tải được phông nền tri ân 20/11. Vui lòng tải lại trang và thử lại.");
+      const blob = await response.blob();
+      const bitmap = await createImageBitmap(blob);
+      return {
+        bitmap,
+        source: "teacher-day-fixed",
+        attribution: "Phông nền riêng 20/11 · Trường Tiểu học Minh Khương",
+        requestId: "",
+        variant: "",
+        cacheStatus: "static",
+        model: ""
+      };
+    }
     const seed = Math.floor(Math.random() * 2147483646) + 1;
     const response = await fetch("/api/background", {
       method: "POST",
@@ -453,8 +473,11 @@
   async function compositeImage(background, person) {
     // Export at a higher portrait resolution. The source subject is retained
     // from the original capture; this does not generatively redraw the face.
+    const special20Nov = selectedScene === "teacher-day-20-11";
     const width = 1600;
-    const height = 2000;
+    // Preserve the complete 20/11 arch (its original near-square aspect ratio).
+    // Cropping it to the standard portrait canvas would cut off the decorations.
+    const height = special20Nov ? 1462 : 2000;
     const output = document.createElement("canvas");
     output.width = width;
     output.height = height;
@@ -466,26 +489,54 @@
 
     const subject = person.canvas;
     const fullBody = person.framing === "full-body";
-    // A portrait/waist-up source is framed as an environmental portrait,
-    // never enlarged until the head fills the frame like a sticker.
-    const fit = Math.min((width * (fullBody ? 0.70 : 0.50)) / subject.width, (height * (fullBody ? 0.78 : 0.58)) / subject.height);
-    const subjectWidth = subject.width * fit;
-    const subjectHeight = subject.height * fit;
-    const x = (width - subjectWidth) / 2;
-    const bottomMargin = person.touchesBottom ? 4 : 24;
-    const y = fullBody ? height - subjectHeight - bottomMargin : Math.round((height - subjectHeight) * 0.46);
-    const footY = Math.min(height - 8, y + subjectHeight * 0.985);
+    let fit, subjectWidth, subjectHeight, x, y, footY;
+    if (special20Nov) {
+      // The open center of the arch is the only standing area. Keep the
+      // subject modest in scale so the greeting, pupils, flowers and signboards
+      // remain completely visible around the person.
+      fit = Math.min(
+        (width * 0.34) / subject.width,
+        (height * (fullBody ? 0.445 : 0.42)) / subject.height
+      );
+      subjectWidth = subject.width * fit;
+      subjectHeight = subject.height * fit;
+      x = (width - subjectWidth) / 2;
+      if (fullBody) {
+        footY = Math.round(height * 0.865);
+        y = Math.round(footY - subjectHeight + (person.touchesBottom ? 2 : 10));
+      } else {
+        // Keep a waist-up original as a smaller environmental portrait;
+        // no missing legs or body parts are invented.
+        y = Math.round(height * 0.43);
+        footY = y + subjectHeight * 0.985;
+      }
+    } else {
+      // Standard landscape scenes retain their existing composition.
+      fit = Math.min((width * (fullBody ? 0.70 : 0.50)) / subject.width, (height * (fullBody ? 0.78 : 0.58)) / subject.height);
+      subjectWidth = subject.width * fit;
+      subjectHeight = subject.height * fit;
+      x = (width - subjectWidth) / 2;
+      const bottomMargin = person.touchesBottom ? 4 : 24;
+      y = fullBody ? height - subjectHeight - bottomMargin : Math.round((height - subjectHeight) * 0.46);
+      footY = Math.min(height - 8, y + subjectHeight * 0.985);
+    }
 
     // Contact shadow is deliberately subtle. Avoid outlining the whole cutout,
     // which made the subject look like a sticker on the earlier version.
     if (fullBody) {
       ctx.save();
-      const groundBrightness = sampleLuminance(ctx, width * 0.3, height * 0.84, width * 0.4, height * 0.12);
+      const groundBrightness = sampleLuminance(
+        ctx,
+        special20Nov ? width * 0.34 : width * 0.3,
+        special20Nov ? height * 0.82 : height * 0.84,
+        special20Nov ? width * 0.32 : width * 0.4,
+        special20Nov ? height * 0.08 : height * 0.12
+      );
       const shadowAlpha = Math.max(0.08, Math.min(0.16, 0.18 - groundBrightness * 0.08));
       ctx.filter = "blur(13px)";
       ctx.fillStyle = "rgba(12,22,14," + shadowAlpha.toFixed(3) + ")";
       ctx.beginPath();
-      ctx.ellipse(width / 2 + subjectWidth * 0.015, footY, Math.max(36, subjectWidth * 0.17), Math.max(8, subjectWidth * 0.018), 0, 0, Math.PI * 2);
+      ctx.ellipse(width / 2 + subjectWidth * 0.012, footY, Math.max(30, subjectWidth * (special20Nov ? 0.21 : 0.17)), Math.max(7, subjectWidth * (special20Nov ? 0.022 : 0.018)), 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
@@ -520,11 +571,15 @@
         setProgress(percent, "ĐANG TẢI MÔ HÌNH", "Đang nạp " + modelName + "…", "Chỉ tải trọng số mô hình về trình duyệt; không tải ảnh cá nhân lên máy chủ.");
       });
       setProgress(44, "ĐANG TÁCH NGƯỜI CHI TIẾT", "Đang tinh chỉnh tóc và mép cơ thể…", "Dùng mô hình alpha matting chuyên cho người; giữ lại điểm ảnh gốc của khuôn mặt.");
-      setProgress(48, "ĐANG TẠO PHÔNG NỀN",
-        selectedMode === "ai-background" ? "AI đang sáng tạo phong cảnh mới…" : "Đang tải ảnh nền thư viện…",
-        selectedMode === "ai-background"
-          ? "AI tạo một cảnh mới theo chủ đề bạn đã chọn. Ảnh người vẫn ở trên điện thoại."
-          : "Đang lấy ảnh phong cảnh cố định đã chọn.");
+      setProgress(48,
+        selectedScene === "teacher-day-20-11" ? "ĐANG GHÉP PHÔNG TRI ÂN 20/11" : "ĐANG TẠO PHÔNG NỀN",
+        selectedScene === "teacher-day-20-11" ? "Đang căn người vào chính giữa cổng…" :
+          (selectedMode === "ai-background" ? "AI đang sáng tạo phong cảnh mới…" : "Đang tải ảnh nền thư viện…"),
+        selectedScene === "teacher-day-20-11" ?
+          "Giữ nguyên toàn bộ phông trang trí, căn tỷ lệ người và bóng chân theo mặt sân." :
+          (selectedMode === "ai-background"
+            ? "AI tạo một cảnh mới theo chủ đề bạn đã chọn. Ảnh người vẫn ở trên điện thoại."
+            : "Đang lấy ảnh phong cảnh cố định đã chọn."));
       const subjectLight = analyzeSubjectLight(person.canvas);
       background = await generateBackground(selectedScene, selectedMode, person.framing, subjectLight);
       setProgress(78, "ĐANG PHỐI GHÉP", "Đang hoàn thiện mép ảnh và ánh sáng…", "Giữ màu ảnh gốc, chỉ dùng alpha matting để tách tóc, vai và đường viền cơ thể.");
@@ -534,7 +589,10 @@
       resultUrl = URL.createObjectURL(output);
       el.resultImage.src = resultUrl;
       const scene = SCENES[selectedScene];
-      if (background.source === "flux-ai") {
+      if (background.source === "teacher-day-fixed") {
+        el.resultDescription.textContent = "Người trong ảnh được tách từ ảnh gốc và đặt vào khoảng trống chính giữa cổng 20/11. Phông trang trí, bảng chữ, hoa và sân trường được giữ nguyên; ảnh người được ghép trên thiết bị, không gửi lên AI. Để kết quả tự nhiên nhất, nên dùng ảnh chụp toàn thân, đứng thẳng và đủ sáng.";
+        el.resultMeta.textContent = "Phông nền riêng 20/11 · " + scene.title + " · " + (person.matteModel || "Alpha matting trên thiết bị") + " · " + (person.framing === "full-body" ? "Toàn thân · căn chân trên mặt sân" : "Chân dung/bán thân · không tạo thêm phần cơ thể") + " · Giữ khuôn mặt gốc";
+      } else if (background.source === "flux-ai") {
         el.resultDescription.textContent = "Phông nền được AI tạo mới riêng cho lượt ghép này. Người trong ảnh được lấy trực tiếp từ ảnh gốc và ghép trên thiết bị; ảnh người không được gửi lên AI." + (person.framing === "portrait" ? " Ảnh gốc là chân dung/bán thân nên bố cục được thu nhỏ theo kiểu chân dung, không tự tạo thêm phần cơ thể bị khuất." : "");
         el.resultMeta.textContent = "AI tạo mới · " + (background.model || "FLUX.1 Schnell") + " · " + scene.title + " · " + (person.matteModel || "Alpha matting trên thiết bị") + " · " + (person.framing === "full-body" ? "Toàn thân" : "Chân dung/bán thân") + " · Giữ khuôn mặt gốc";
       } else {
@@ -613,6 +671,10 @@
   }
 
   el.sceneGrid.addEventListener("click", event => {
+    const button = event.target.closest("[data-scene]");
+    if (button) selectScene(button.dataset.scene);
+  });
+  el.teacherDayGrid.addEventListener("click", event => {
     const button = event.target.closest("[data-scene]");
     if (button) selectScene(button.dataset.scene);
   });
