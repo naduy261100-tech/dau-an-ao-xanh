@@ -92,8 +92,10 @@
     try {
       const response = await fetch("/api/health", { cache: "no-store" });
       if (!response.ok) throw new Error("Health check failed");
-      // The real-photo library keeps capture available even when the free
-      // generative model is temporarily busy or not configured.
+      const status = await response.json();
+      if (status.ready !== true) throw new Error("AI binding is not configured");
+      // Health confirms configuration only; the actual AI quota is checked
+      // when a background is generated, without spending Neurons here.
       serviceReady = true;
       updateAgreeButton();
     } catch (_) {
@@ -422,7 +424,8 @@
       attribution: response.headers.get("x-background-attribution") || "",
       seed: response.headers.get("x-background-seed") || "",
       variant: response.headers.get("x-background-pool-variant") || "",
-      cacheStatus: response.headers.get("x-background-cache") || ""
+      cacheStatus: response.headers.get("x-background-cache") || "",
+      model: response.headers.get("x-background-model") || ""
     };
   }
 
@@ -532,8 +535,8 @@
       el.resultImage.src = resultUrl;
       const scene = SCENES[selectedScene];
       if (background.source === "flux-ai") {
-        el.resultDescription.textContent = "Phông nền được AI tạo mới trong ngày và luân phiên sử dụng để phục vụ nhiều lượt ghép. Người trong ảnh được lấy trực tiếp từ ảnh gốc và ghép trên thiết bị; ảnh người không được gửi lên AI." + (person.framing === "portrait" ? " Ảnh gốc là chân dung/bán thân nên bố cục được thu nhỏ theo kiểu chân dung, không tự tạo thêm phần cơ thể bị khuất." : "");
-        el.resultMeta.textContent = "Nền AI trong kho hôm nay · " + scene.title + " · Biến thể " + (background.variant || "") + " · " + (person.matteModel || "Alpha matting trên thiết bị") + " · " + (person.framing === "full-body" ? "Toàn thân" : "Chân dung/bán thân") + " · Giữ khuôn mặt gốc";
+        el.resultDescription.textContent = "Phông nền được AI tạo mới riêng cho lượt ghép này. Người trong ảnh được lấy trực tiếp từ ảnh gốc và ghép trên thiết bị; ảnh người không được gửi lên AI." + (person.framing === "portrait" ? " Ảnh gốc là chân dung/bán thân nên bố cục được thu nhỏ theo kiểu chân dung, không tự tạo thêm phần cơ thể bị khuất." : "");
+        el.resultMeta.textContent = "AI tạo mới · " + (background.model || "FLUX.1 Schnell") + " · " + scene.title + " · " + (person.matteModel || "Alpha matting trên thiết bị") + " · " + (person.framing === "full-body" ? "Toàn thân" : "Chân dung/bán thân") + " · Giữ khuôn mặt gốc";
       } else {
         el.resultDescription.textContent = "Người trong ảnh được giữ trực tiếp từ ảnh gốc và ghép với ảnh phong cảnh trong thư viện trên thiết bị." + (person.framing === "portrait" ? " Ảnh gốc là chân dung/bán thân nên bố cục được thu nhỏ theo kiểu chân dung, không tự tạo thêm phần cơ thể bị khuất." : "");
         el.resultMeta.textContent = "Nền thư viện · " + scene.title + " · " + (person.matteModel || "Alpha matting trên thiết bị") + " · " + (person.framing === "full-body" ? "Toàn thân" : "Chân dung/bán thân") + " · Giữ khuôn mặt gốc" + (background.attribution ? " · " + background.attribution : "");
