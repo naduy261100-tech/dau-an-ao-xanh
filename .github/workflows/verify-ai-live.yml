@@ -1,0 +1,37 @@
+name: Verify live AI background inference
+
+on:
+  push:
+    branches:
+      - fix/ai-composition-grounding-20261106
+    paths:
+      - .github/workflows/verify-ai-live.yml
+
+permissions:
+  contents: read
+
+jobs:
+  one-shot-inference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Make one real AI background request
+        shell: bash
+        run: |
+          set -euo pipefail
+          body='{"scene":"wood-bridge","mode":"ai-background","seed":202611060844,"framing":"full-body","light":{"brightness":0.52,"warmth":0}}'
+          status="$(curl --silent --show-error --connect-timeout 15 --max-time 90 -X POST "https://dau-an-ao-xanh.naduy261100.workers.dev/api/background" -H "Content-Type: application/json" --data "$body" -D "$RUNNER_TEMP/headers.txt" -o "$RUNNER_TEMP/background.bin" -w "%{http_code}")"
+          echo "AI_BACKGROUND_HTTP_STATUS=$status"
+          if [ "$status" != "200" ]; then
+            cat "$RUNNER_TEMP/background.bin"
+            exit 1
+          fi
+          mime="$(file --brief --mime-type "$RUNNER_TEMP/background.bin")"
+          size="$(wc -c < "$RUNNER_TEMP/background.bin")"
+          source="$(grep -i '^x-background-source:' "$RUNNER_TEMP/headers.txt" | tail -1 | tr -d '\r' | awk -F': ' '{print $2}' || true)"
+          model="$(grep -i '^x-background-model:' "$RUNNER_TEMP/headers.txt" | tail -1 | tr -d '\r' | awk -F': ' '{print $2}' || true)"
+          echo "MIME=$mime SIZE=$size SOURCE=$source MODEL=$model"
+          test "$mime" = "image/jpeg"
+          test "$size" -gt 10000
+          test "$source" = "flux-ai"
+          echo "PASS: One live inference returned a real JPEG from the AI provider."
