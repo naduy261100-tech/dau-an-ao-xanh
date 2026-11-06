@@ -372,7 +372,9 @@
     );
     const aspect = trimmed.height / trimmed.width;
     const touchesBottom = maxY >= height * 0.97;
-    const framing = aspect >= 1.88 && touchesBottom ? "full-body" : "portrait";
+    // Full-length people can have a wide stance or a little floor below their shoes.
+    // Do not require the alpha mask to touch the bottom of the original photo.
+    const framing = aspect >= 1.72 ? "full-body" : "portrait";
     return { canvas: trimmed, touchesBottom, aspect, framing, matteModel: matteModelName };
   }
 
@@ -468,13 +470,16 @@
     const fullBody = person.framing === "full-body";
     // A portrait/waist-up source is framed as an environmental portrait,
     // never enlarged until the head fills the frame like a sticker.
-    const fit = Math.min((width * (fullBody ? 0.70 : 0.50)) / subject.width, (height * (fullBody ? 0.78 : 0.58)) / subject.height);
+    // Increase foreground scale so people do not look distant in a large empty scene.
+    // Keep a width guard for wide poses and use height as the main scale anchor.
+    const fit = Math.min((width * (fullBody ? 0.84 : 0.64)) / subject.width, (height * (fullBody ? 0.88 : 0.68)) / subject.height);
     const subjectWidth = subject.width * fit;
     const subjectHeight = subject.height * fit;
     const x = (width - subjectWidth) / 2;
-    const bottomMargin = person.touchesBottom ? 4 : 24;
+    // Keep the soles close to the ground line; a large bottom gap made people float.
+    const bottomMargin = person.touchesBottom ? 2 : 8;
     const y = fullBody ? height - subjectHeight - bottomMargin : Math.round((height - subjectHeight) * 0.46);
-    const footY = Math.min(height - 8, y + subjectHeight * 0.985);
+    const footY = Math.min(height - 3, y + subjectHeight * 0.994);
 
     // Contact shadow is deliberately subtle. Avoid outlining the whole cutout,
     // which made the subject look like a sticker on the earlier version.
@@ -482,10 +487,16 @@
       ctx.save();
       const groundBrightness = sampleLuminance(ctx, width * 0.3, height * 0.84, width * 0.4, height * 0.12);
       const shadowAlpha = Math.max(0.08, Math.min(0.16, 0.18 - groundBrightness * 0.08));
-      ctx.filter = "blur(13px)";
-      ctx.fillStyle = "rgba(12,22,14," + shadowAlpha.toFixed(3) + ")";
+      // Broad cast shadow plus a narrow contact shadow directly under the soles.
+      ctx.filter = "blur(18px)";
+      ctx.fillStyle = "rgba(12,22,14," + (shadowAlpha * 0.72).toFixed(3) + ")";
       ctx.beginPath();
-      ctx.ellipse(width / 2 + subjectWidth * 0.015, footY, Math.max(36, subjectWidth * 0.17), Math.max(8, subjectWidth * 0.018), 0, 0, Math.PI * 2);
+      ctx.ellipse(width / 2 + subjectWidth * 0.025, footY - 2, Math.max(48, subjectWidth * 0.22), Math.max(12, subjectWidth * 0.024), 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.filter = "blur(4px)";
+      ctx.fillStyle = "rgba(20,22,20," + (shadowAlpha * 0.72).toFixed(3) + ")";
+      ctx.beginPath();
+      ctx.ellipse(width / 2 + subjectWidth * 0.01, footY, Math.max(26, subjectWidth * 0.13), Math.max(4, subjectWidth * 0.009), 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
