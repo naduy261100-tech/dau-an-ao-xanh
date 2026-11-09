@@ -28,7 +28,7 @@ jobs:
           echo "TEACHER_DAY_ASSET_STATUS=$asset_status"
           file --brief --mime-type "$RUNNER_TEMP/teacher-day.webp" || true
           wc -c "$RUNNER_TEMP/teacher-day.webp"
-          js_path="$(grep -oE '<script[^>]+src="[^"]+"' "$RUNNER_TEMP/home.html" | sed -n '1p' | sed -E 's/.*src="([^"]+)".*/\1/')"
+          js_path="$(grep -oE '<script[^>]+src="[^"]+"' "$RUNNER_TEMP/home.html" | grep -oE '/assets/app\.js[^"]*' | head -1 || true)"
           if [ -n "$js_path" ]; then
             js_url="$base$js_path"
             js_status="$(curl -sS -L -o "$RUNNER_TEMP/live.js" -w "%{http_code}" "$js_url")"
