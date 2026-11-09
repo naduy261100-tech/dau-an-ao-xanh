@@ -6,6 +6,10 @@
     consentCheck: $("consentCheck"),
     agreeButton: $("agreeButton"),
     sceneGrid: $("sceneGrid"),
+    teacherDayGrid: $("teacherDayGrid"),
+    cameraVideo: $("cameraVideo"),
+    capturePhotoBtn: $("capturePhotoBtn"),
+    nativeCameraFallbackBtn: $("nativeCameraFallbackBtn"),
     modeOptions: document.querySelectorAll("[data-mode]"),
     modeDisclaimer: $("modeDisclaimer"),
     privacyTitle: $("privacyTitle"),
@@ -50,7 +54,8 @@
     "garden-walk": { title: "Lối vườn xanh", author: "nhavantuonglai / Pexels" },
     "traditional-garden": { title: "Vườn nhà gỗ", author: "juliber Tran / Pexels" },
     "flower-garden": { title: "Vườn hoa rực rỡ", author: "Nguyễn Tiến Thịnh / Pexels" },
-    "waterfall": { title: "Thác rừng trên bậc đá", author: "Pexels" }
+    "waterfall": { title: "Thác rừng trên bậc đá", author: "Pexels" },
+    "teacher-day-20-11": { title: "Cổng tri ân ngày 20/11", author: "Phông nền Trường Tiểu học Minh Khương" }
   };
 
   let selectedScene = "rice-gold";
@@ -65,8 +70,13 @@
   let resultBlob = null;
   let resultUrl = null;
   let downloadBusy = false;
+  let cameraStream = null;
+  let cameraSessionId = 0;
+  let cameraWarmupPromise = null;
+  let captureSequence = 0;
 
   function showScreen(name) {
+    if (name !== "camera") stopCameraStream();
     el.consentScreen.hidden = name !== "consent";
     el.cameraScreen.hidden = name !== "camera";
     el.processingScreen.hidden = name !== "processing";
@@ -124,6 +134,8 @@
 
   function selectMode(mode) {
     if (mode !== "ai-background" && mode !== "library") return;
+    // The 20/11 arch is one fixed original school backdrop, not a generated landscape.
+    if (selectedScene === "teacher-day-20-11") mode = "library";
     selectedMode = mode;
     for (const button of el.modeOptions) {
       const active = button.dataset.mode === mode;
@@ -149,12 +161,123 @@
   function selectScene(id) {
     if (!SCENES[id]) return;
     selectedScene = id;
-    for (const button of el.sceneGrid.querySelectorAll("[data-scene]")) {
+    if (id === "teacher-day-20-11") selectMode("library");
+    for (const button of document.querySelectorAll("[data-scene]")) {
       const active = button.dataset.scene === id;
       button.classList.toggle("is-selected", active);
       button.setAttribute("aria-pressed", active ? "true" : "false");
     }
     clearError();
+  }
+
+  function stopCameraStream() {
+    cameraSessionId++;
+    if (cameraStream) {
+      for (const track of cameraStream.getTracks()) track.stop();
+      cameraStream = null;
+    }
+    if (el.cameraVideo) el.cameraVideo.srcObject = null;
+    if (el.capturePhotoBtn) el.capturePhotoBtn.disabled = true;
+  }
+
+  async function warmMattingModel() {
+    if (!cameraWarmupPromise) {
+      cameraWarmupPromise = createMattingEngine((fraction, modelName) => {
+        if (!el.cameraScreen.hidden) {
+          const percent = Math.round(Math.max(0, Math.min(1, fraction)) * 100);
+          el.cameraStatusText.textContent = "Đang chuẩn bị mô hình tách người " + modelName + " (" + percent + "%). Camera đã mở; ảnh chỉ được xử lý trên thiết bị.";
+        }
+      }).catch(error => {
+        cameraWarmupPromise = null;
+        throw error;
+      });
+    }
+    return cameraWarmupPromise;
+  }
+
+  async function startLiveCamera() {
+    // Release any previous camera track before opening a fresh session.
+    stopCameraStream();
+    const thisSession = ++cameraSessionId;
+    el.capturePhotoBtn.disabled = true;
+    el.cameraStatusTitle.textContent = "Đang kết nối camera…";
+    el.cameraStatusText.textContent = "Đang mở camera sau và chuẩn bị bộ tách người cho lần chụp đầu tiên.";
+    if (!navigator.mediaDevices?.getUserMedia) {
+      el.cameraStatusTitle.textContent = "Thiết bị chưa hỗ trợ camera trực tiếp";
+      el.cameraStatusText.textContent = "Bạn vẫn có thể mở camera điện thoại bằng nút dự phòng bên dưới hoặc chọn ảnh từ thiết bị.";
+      el.nativeCameraFallbackBtn.hidden = false;
+      return;
+    }
+    try {
+      // Start downloading/loading the matting model while the camera starts.
+      const warmup = warmMattingModel();
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        }
+      });
+      if (thisSession !== cameraSessionId || el.cameraScreen.hidden) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
+      cameraStream = stream;
+      el.cameraVideo.srcObject = stream;
+      await el.cameraVideo.play();
+      if (thisSession !== cameraSessionId) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
+      el.cameraStatusTitle.textContent = "Camera đã mở";
+      el.cameraStatusText.textContent = "Đang hoàn tất khởi tạo AI lần đầu. Giữ máy thẳng, đứng cách camera khoảng 2–3 m và để đủ cả người trong khung hình.";
+      await warmup;
+      if (thisSession !== cameraSessionId || el.cameraScreen.hidden) return;
+      el.capturePhotoBtn.disabled = false;
+      el.cameraStatusTitle.textContent = "Đã sẵn sàng chụp";
+      el.cameraStatusText.textContent = "Khung hình trực tiếp đã sẵn sàng. Mỗi lần bấm chụp sẽ lấy một ảnh mới, không dùng lại ảnh chụp trước.";
+      el.nativeCameraFallbackBtn.hidden = true;
+    } catch (error) {
+      if (thisSession !== cameraSessionId) return;
+      stopCameraStream();
+      el.cameraStatusTitle.textContent = "Chưa mở được camera trực tiếp";
+      el.cameraStatusText.textContent = (error instanceof Error ? error.message : "Trình duyệt chưa cấp quyền camera.") + " Bạn có thể dùng camera dự phòng hoặc chọn ảnh từ thiết bị.";
+      el.nativeCameraFallbackBtn.hidden = false;
+    }
+  }
+
+  async function captureLivePhoto() {
+    if (!cameraStream || !el.cameraVideo.videoWidth || !el.cameraVideo.videoHeight || processing) return;
+    el.capturePhotoBtn.disabled = true;
+    el.cameraStatusTitle.textContent = "Đang chụp ảnh mới…";
+    try {
+      // Wait for a fresh decoded video frame before reading pixels.
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const video = el.cameraVideo;
+      const scale = Math.min(1, 2560 / Math.max(video.videoWidth, video.videoHeight));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(video.videoWidth * scale);
+      canvas.height = Math.round(video.videoHeight * scale);
+      const context = canvas.getContext("2d");
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise((resolve, reject) => {
+        canvas.toBlob(value => value ? resolve(value) : reject(new Error("Không lưu được khung hình camera. Vui lòng chụp lại.")), "image/jpeg", 0.96);
+      });
+      const captureId = ++captureSequence;
+      const freshFile = new File([blob], "minh-khuong-" + Date.now() + "-" + captureId + ".jpg", {
+        type: "image/jpeg",
+        lastModified: Date.now()
+      });
+      currentPhotoFile = freshFile;
+      updateSavedPhotoControls();
+      clearResult();
+      await processPhoto(freshFile);
+    } catch (error) {
+      el.cameraStatusTitle.textContent = "Chưa chụp được ảnh";
+      el.cameraStatusText.textContent = error instanceof Error ? error.message : "Có lỗi khi chụp ảnh. Vui lòng thử lại.";
+      el.capturePhotoBtn.disabled = false;
+    }
   }
 
   function openNativeCamera() {
@@ -165,12 +288,8 @@
       return;
     }
     clearError();
-    el.nativeCameraInput.value = "";
-    el.cameraStatusTitle.textContent = "Đang mở camera chụp ảnh…";
-    el.cameraStatusText.textContent = "Camera chụp ảnh của điện thoại sẽ xuất hiện. Chụp xong, ảnh sẽ tự chuyển sang bước AI xử lý.";
     showScreen("camera");
-    // Call directly from the user gesture. No embedded video/player is used.
-    el.nativeCameraInput.click();
+    startLiveCamera();
   }
 
   function cropToPortrait(sourceWidth, sourceHeight) {
@@ -402,6 +521,20 @@
   }
 
   async function generateBackground(scene, mode, framing, light) {
+    if (scene === "teacher-day-20-11") {
+      const response = await fetch("/assets/teacher-day-20-11.webp", { cache: "force-cache" });
+      if (!response.ok) throw new Error("Chưa tải được phông nền tri ân 20/11. Vui lòng tải lại trang.");
+      const bitmap = await createImageBitmap(await response.blob());
+      return {
+        bitmap,
+        source: "teacher-day-fixed",
+        attribution: "Phông nền gốc · Trường Tiểu học Minh Khương",
+        requestId: "",
+        variant: "",
+        cacheStatus: "static",
+        model: ""
+      };
+    }
     const seed = Math.floor(Math.random() * 2147483646) + 1;
     const response = await fetch("/api/background", {
       method: "POST",
@@ -452,58 +585,143 @@
     return sum / (24 * 24) / 255;
   }
 
-  async function compositeImage(background, person) {
-    // Export at a higher portrait resolution. The source subject is retained
-    // from the original capture; this does not generatively redraw the face.
+  function colorStatistics(canvas, sampleAlpha = true) {
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    const { data } = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    let r = 0, g = 0, b = 0, luma = 0, count = 0;
+    const stride = Math.max(1, Math.floor(Math.sqrt((canvas.width * canvas.height) / 9000)));
+    for (let y = 0; y < canvas.height; y += stride) {
+      for (let x = 0; x < canvas.width; x += stride) {
+        const i = (y * canvas.width + x) * 4;
+        if (sampleAlpha && data[i + 3] < 190) continue;
+        const rr = data[i], gg = data[i + 1], bb = data[i + 2];
+        r += rr; g += gg; b += bb;
+        luma += 0.2126 * rr + 0.7152 * gg + 0.0722 * bb;
+        count++;
+      }
+    }
+    if (!count) return { r: 128, g: 128, b: 128, luma: 128, warmth: 0 };
+    r /= count; g /= count; b /= count; luma /= count;
+    return { r, g, b, luma, warmth: (r - b) / Math.max(32, r + g + b) };
+  }
+
+  function sampleBackgroundRegion(ctx, x, y, w, h) {
+    const x0 = Math.max(0, Math.min(ctx.canvas.width - 1, Math.round(x)));
+    const y0 = Math.max(0, Math.min(ctx.canvas.height - 1, Math.round(y)));
+    const sw = Math.max(1, Math.min(ctx.canvas.width - x0, Math.round(w)));
+    const sh = Math.max(1, Math.min(ctx.canvas.height - y0, Math.round(h)));
+    const sample = document.createElement("canvas");
+    sample.width = sample.height = 36;
+    const sctx = sample.getContext("2d", { willReadFrequently: true });
+    sctx.drawImage(ctx.canvas, x0, y0, sw, sh, 0, 0, 36, 36);
+    return colorStatistics(sample, false);
+  }
+
+  function harmonizeSubject(subject, targetLight) {
+    const canvas = document.createElement("canvas");
+    canvas.width = subject.width;
+    canvas.height = subject.height;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(subject, 0, 0);
+    const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = image.data;
+    const source = colorStatistics(canvas, true);
+    // Small exposure and white-balance correction only: facial geometry and
+    // original details remain unchanged, while the cutout no longer keeps
+    // a visibly different global light temperature from the new environment.
+    const gain = Math.max(0.94, Math.min(1.06, Math.pow(targetLight.luma / Math.max(35, source.luma), 0.16)));
+    const warmShift = Math.max(-3.5, Math.min(3.5, (targetLight.warmth - source.warmth) * 15));
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] < 4) continue;
+      data[i] = Math.max(0, Math.min(255, (data[i] - 128) * 1.015 + 128) * gain + warmShift);
+      data[i + 1] = Math.max(0, Math.min(255, (data[i + 1] - 128) * 1.015 + 128) * gain);
+      data[i + 2] = Math.max(0, Math.min(255, (data[i + 2] - 128) * 1.015 + 128) * gain - warmShift);
+    }
+    ctx.putImageData(image, 0, 0);
+    return canvas;
+  }
+
+  async function compositeImage(background, person, sceneId) {
+    const special20Nov = sceneId === "teacher-day-20-11";
     const width = 1600;
-    const height = 2000;
+    const height = special20Nov ? Math.round(width * background.height / background.width) : 2000;
     const output = document.createElement("canvas");
     output.width = width;
     output.height = height;
-    const ctx = output.getContext("2d");
+    const ctx = output.getContext("2d", { willReadFrequently: true });
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
 
-    drawCover(ctx, background, 0, 0, width, height);
+    if (special20Nov) {
+      // Keep the original complete 20/11 arch and all lettering/decorations.
+      ctx.drawImage(background, 0, 0, width, height);
+    } else {
+      drawCover(ctx, background, 0, 0, width, height);
+    }
 
-    const subject = person.canvas;
+    const originalSubject = person.canvas;
     const fullBody = person.framing === "full-body";
-    // A portrait/waist-up source is framed as an environmental portrait,
-    // never enlarged until the head fills the frame like a sticker.
-    // Increase foreground scale so people do not look distant in a large empty scene.
-    // Keep a width guard for wide poses and use height as the main scale anchor.
-    const fit = Math.min((width * (fullBody ? 0.84 : 0.64)) / subject.width, (height * (fullBody ? 0.88 : 0.68)) / subject.height);
-    const subjectWidth = subject.width * fit;
-    const subjectHeight = subject.height * fit;
-    const x = (width - subjectWidth) / 2;
-    // Keep the soles close to the ground line; a large bottom gap made people float.
-    const bottomMargin = person.touchesBottom ? 2 : 8;
-    const y = fullBody ? height - subjectHeight - bottomMargin : Math.round((height - subjectHeight) * 0.46);
-    const footY = Math.min(height - 3, y + subjectHeight * 0.994);
+    let fit, subjectWidth, subjectHeight, x, y, footY;
+    if (special20Nov) {
+      fit = Math.min((width * 0.29) / originalSubject.width, (height * (fullBody ? 0.49 : 0.34)) / originalSubject.height);
+      subjectWidth = originalSubject.width * fit;
+      subjectHeight = originalSubject.height * fit;
+      x = (width - subjectWidth) / 2;
+      if (fullBody) {
+        footY = Math.round(height * 0.895);
+        y = footY - subjectHeight + (person.touchesBottom ? 1 : 3);
+      } else {
+        y = Math.round(height * 0.48);
+        footY = y + subjectHeight;
+      }
+    } else {
+      fit = Math.min((width * (fullBody ? 0.84 : 0.64)) / originalSubject.width, (height * (fullBody ? 0.88 : 0.68)) / originalSubject.height);
+      subjectWidth = originalSubject.width * fit;
+      subjectHeight = originalSubject.height * fit;
+      x = (width - subjectWidth) / 2;
+      const bottomMargin = person.touchesBottom ? 2 : 8;
+      y = fullBody ? height - subjectHeight - bottomMargin : Math.round((height - subjectHeight) * 0.46);
+      footY = Math.min(height - 3, y + subjectHeight * 0.994);
+    }
 
-    // Contact shadow is deliberately subtle. Avoid outlining the whole cutout,
-    // which made the subject look like a sticker on the earlier version.
+    const groundStats = sampleBackgroundRegion(
+      ctx,
+      x - subjectWidth * 0.12,
+      Math.min(height - 65, footY + (special20Nov ? -90 : 8)),
+      subjectWidth * 1.24,
+      special20Nov ? 85 : 95
+    );
+    const sideStats = sampleBackgroundRegion(
+      ctx,
+      Math.max(0, x - Math.max(10, subjectWidth * 0.09)),
+      Math.max(0, y + subjectHeight * 0.25),
+      Math.max(10, subjectWidth * 0.09),
+      Math.max(30, subjectHeight * 0.5)
+    );
+    const ambientLight = {
+      luma: groundStats.luma * 0.65 + sideStats.luma * 0.35,
+      warmth: groundStats.warmth * 0.65 + sideStats.warmth * 0.35
+    };
+    const subject = harmonizeSubject(originalSubject, ambientLight);
+
+    // Derive a gentle contact shadow from the real ground luminance and place
+    // it directly beneath the shoes; this avoids the cut-paper/sticker effect.
     if (fullBody) {
+      const shadowAlpha = Math.max(0.07, Math.min(0.18, 0.19 - (groundStats.luma / 255) * 0.09));
       ctx.save();
-      const groundBrightness = sampleLuminance(ctx, width * 0.3, height * 0.84, width * 0.4, height * 0.12);
-      const shadowAlpha = Math.max(0.08, Math.min(0.16, 0.18 - groundBrightness * 0.08));
-      // Broad cast shadow plus a narrow contact shadow directly under the soles.
       ctx.filter = "blur(18px)";
-      ctx.fillStyle = "rgba(12,22,14," + (shadowAlpha * 0.72).toFixed(3) + ")";
+      ctx.fillStyle = "rgba(12,18,14," + (shadowAlpha * 0.62).toFixed(3) + ")";
       ctx.beginPath();
-      ctx.ellipse(width / 2 + subjectWidth * 0.025, footY - 2, Math.max(48, subjectWidth * 0.22), Math.max(12, subjectWidth * 0.024), 0, 0, Math.PI * 2);
+      ctx.ellipse(width / 2 + subjectWidth * 0.025, footY - 2, Math.max(45, subjectWidth * 0.22), Math.max(12, subjectWidth * 0.024), 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.filter = "blur(4px)";
       ctx.fillStyle = "rgba(20,22,20," + (shadowAlpha * 0.72).toFixed(3) + ")";
       ctx.beginPath();
-      ctx.ellipse(width / 2 + subjectWidth * 0.01, footY, Math.max(26, subjectWidth * 0.13), Math.max(4, subjectWidth * 0.009), 0, 0, Math.PI * 2);
+      ctx.ellipse(width / 2 + subjectWidth * 0.01, footY, Math.max(24, subjectWidth * 0.13), Math.max(4, subjectWidth * 0.009), 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
 
-    // Draw the original cutout without brightness, contrast, saturation or
-    // beauty filters. This keeps facial features and skin colour from the
-    // source photo instead of altering them to match an AI-generated face.
     ctx.save();
     ctx.filter = "none";
     ctx.drawImage(subject, x, y, subjectWidth, subjectHeight);
@@ -539,20 +757,23 @@
       const subjectLight = analyzeSubjectLight(person.canvas);
       background = await generateBackground(selectedScene, selectedMode, person.framing, subjectLight);
       setProgress(78, "ĐANG PHỐI GHÉP", "Đang hoàn thiện mép ảnh và ánh sáng…", "Giữ màu ảnh gốc, chỉ dùng alpha matting để tách tóc, vai và đường viền cơ thể.");
-      const output = await compositeImage(background.bitmap, person);
+      const output = await compositeImage(background.bitmap, person, selectedScene);
       clearResult();
       resultBlob = output;
       resultUrl = URL.createObjectURL(output);
       el.resultImage.src = resultUrl;
       const scene = SCENES[selectedScene];
-      if (background.source === "flux-ai") {
+      if (background.source === "teacher-day-fixed") {
+        el.resultDescription.textContent = "Phông cổng tri ân 20/11 được giữ nguyên toàn bộ. Người trong ảnh được căn vào khoảng trống giữa cổng, đặt chân trên mặt sân và cân chỉnh ánh sáng nhẹ trên thiết bị; ảnh người không gửi lên máy chủ.";
+        el.resultMeta.textContent = "PHÔNG NỀN RIÊNG 20/11 · " + scene.title + " · " + (person.framing === "full-body" ? "Toàn thân · căn chân trên sân" : "Chân dung/bán thân") + " · Giữ chi tiết khuôn mặt gốc";
+      } else if (background.source === "flux-ai") {
         el.resultDescription.textContent = "Phông nền được AI tạo mới riêng cho lượt ghép này. Người trong ảnh được lấy trực tiếp từ ảnh gốc và ghép trên thiết bị; ảnh người không được gửi lên AI." + (person.framing === "portrait" ? " Ảnh gốc là chân dung/bán thân nên bố cục được thu nhỏ theo kiểu chân dung, không tự tạo thêm phần cơ thể bị khuất." : "");
         el.resultMeta.textContent = "AI tạo mới · " + (background.model || "FLUX.1 Schnell") + " · " + scene.title + " · " + (person.matteModel || "Alpha matting trên thiết bị") + " · " + (person.framing === "full-body" ? "Toàn thân" : "Chân dung/bán thân") + " · Giữ khuôn mặt gốc";
       } else {
         el.resultDescription.textContent = "Người trong ảnh được giữ trực tiếp từ ảnh gốc và ghép với ảnh phong cảnh trong thư viện trên thiết bị." + (person.framing === "portrait" ? " Ảnh gốc là chân dung/bán thân nên bố cục được thu nhỏ theo kiểu chân dung, không tự tạo thêm phần cơ thể bị khuất." : "");
         el.resultMeta.textContent = "Nền thư viện · " + scene.title + " · " + (person.matteModel || "Alpha matting trên thiết bị") + " · " + (person.framing === "full-body" ? "Toàn thân" : "Chân dung/bán thân") + " · Giữ khuôn mặt gốc" + (background.attribution ? " · " + background.attribution : "");
       }
-      el.downloadHelp.textContent = "Ảnh JPEG 1600 × 2000 px. Khuôn mặt và trang phục được lấy từ ảnh gốc, không bị AI tạo sinh vẽ lại.";
+      el.downloadHelp.textContent = specialResultDescription(selectedScene);
       setProgress(100, "HOÀN TẤT", "Bức ảnh đã sẵn sàng!", "Có thể tải ảnh về, chụp lại hoặc quay lại chọn một phong cảnh khác để ghép cùng ảnh này.");
       await delay(350);
       showScreen("result");
@@ -565,6 +786,10 @@
       processing = false;
       updateAgreeButton();
     }
+  }
+
+  function specialResultDescription(sceneId) {
+    return sceneId === "teacher-day-20-11" ? "Ảnh JPEG chất lượng cao. Giữ nguyên phông cổng chào 20/11 và ghép người ở chính giữa khoảng sân." : "Ảnh JPEG chất lượng cao. Khuôn mặt và trang phục được lấy từ ảnh gốc; ánh sáng được cân chỉnh nhẹ để hợp với phông nền.";
   }
 
   function delay(ms) {
@@ -627,6 +852,10 @@
     const button = event.target.closest("[data-scene]");
     if (button) selectScene(button.dataset.scene);
   });
+  el.teacherDayGrid?.addEventListener("click", event => {
+    const button = event.target.closest("[data-scene]");
+    if (button) selectScene(button.dataset.scene);
+  });
 
   el.consentCheck.addEventListener("change", () => {
     updateAgreeButton();
@@ -647,6 +876,12 @@
   });
 
   el.openCameraAgainBtn.addEventListener("click", openNativeCamera);
+  el.capturePhotoBtn.addEventListener("click", captureLivePhoto);
+  el.nativeCameraFallbackBtn.addEventListener("click", () => {
+    stopCameraStream();
+    el.nativeCameraInput.value = "";
+    el.nativeCameraInput.click();
+  });
   el.uploadPhotoBtn.addEventListener("click", openUploadPicker);
   el.uploadPhotoCameraBtn.addEventListener("click", openUploadPicker);
   el.uploadPhotoInput.addEventListener("change", async () => {
@@ -670,6 +905,7 @@
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
   el.backToGalleryBtn.addEventListener("click", () => {
+    stopCameraStream();
     showScreen("consent");
     updateAgreeButton();
     clearError();
@@ -681,6 +917,8 @@
       showError("Tệp đã chọn không phải là ảnh. Vui lòng chọn ảnh JPEG, PNG hoặc HEIC.");
       return;
     }
+    // A newly selected/captured photo must never inherit the prior result.
+    clearResult();
     currentPhotoFile = file;
     updateSavedPhotoControls();
     await processPhoto(file);
@@ -695,13 +933,28 @@
     }
     consentAccepted = true;
     clearError();
+    stopCameraStream();
     el.uploadPhotoInput.value = "";
     el.uploadPhotoInput.click();
   }
 
   el.nativeCameraInput.addEventListener("change", async () => {
+    // Snapshot the selected bytes into a fresh File before clearing the input.
+    // This prevents mobile camera pickers from reusing a previous File handle.
     const file = el.nativeCameraInput.files?.[0];
-    if (file) await handlePhotoFile(file);
+    if (file) {
+      try {
+        const bytes = await file.arrayBuffer();
+        const fresh = new File([bytes], "minh-khuong-camera-" + Date.now() + ".jpg", {
+          type: file.type || "image/jpeg",
+          lastModified: Date.now()
+        });
+        await handlePhotoFile(fresh);
+      } catch (error) {
+        showScreen("consent");
+        showError(error instanceof Error ? error.message : "Không đọc được ảnh camera mới.");
+      }
+    }
     el.nativeCameraInput.value = "";
   });
 
@@ -713,9 +966,12 @@
   el.downloadBtn.addEventListener("click", downloadResult);
   el.retakeBtn.addEventListener("click", () => {
     clearResult();
+    currentPhotoFile = null;
+    updateSavedPhotoControls();
     openNativeCamera();
   });
   window.addEventListener("pagehide", () => {
+    stopCameraStream();
     clearResult();
     try { matteRemoverInstance?.destroy?.(); } catch (_) {}
     matteRemoverInstance = null;
