@@ -196,6 +196,8 @@
   }
 
   async function startLiveCamera() {
+    // Release any previous camera track before opening a fresh session.
+    stopCameraStream();
     const thisSession = ++cameraSessionId;
     el.capturePhotoBtn.disabled = true;
     el.cameraStatusTitle.textContent = "Đang kết nối camera…";
@@ -224,7 +226,10 @@
       cameraStream = stream;
       el.cameraVideo.srcObject = stream;
       await el.cameraVideo.play();
-      if (thisSession !== cameraSessionId) return;
+      if (thisSession !== cameraSessionId) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
       el.cameraStatusTitle.textContent = "Camera đã mở";
       el.cameraStatusText.textContent = "Đang hoàn tất khởi tạo AI lần đầu. Giữ máy thẳng, đứng cách camera khoảng 2–3 m và để đủ cả người trong khung hình.";
       await warmup;
@@ -912,6 +917,8 @@
       showError("Tệp đã chọn không phải là ảnh. Vui lòng chọn ảnh JPEG, PNG hoặc HEIC.");
       return;
     }
+    // A newly selected/captured photo must never inherit the prior result.
+    clearResult();
     currentPhotoFile = file;
     updateSavedPhotoControls();
     await processPhoto(file);
@@ -926,6 +933,7 @@
     }
     consentAccepted = true;
     clearError();
+    stopCameraStream();
     el.uploadPhotoInput.value = "";
     el.uploadPhotoInput.click();
   }
