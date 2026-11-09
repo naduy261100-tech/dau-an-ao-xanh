@@ -215,8 +215,9 @@
         audio: false,
         video: {
           facingMode: { ideal: "environment" },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
+          width: { ideal: 1080 },
+          height: { ideal: 1920 },
+          aspectRatio: { ideal: 0.75 }
         }
       });
       if (thisSession !== cameraSessionId || el.cameraScreen.hidden) {
@@ -252,15 +253,40 @@
     el.capturePhotoBtn.disabled = true;
     el.cameraStatusTitle.textContent = "Đang chụp ảnh mới…";
     try {
-      // Wait for a fresh decoded video frame before reading pixels.
-      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       const video = el.cameraVideo;
-      const scale = Math.min(1, 2560 / Math.max(video.videoWidth, video.videoHeight));
+      // Wait for the next decoded camera frame, not merely the next paint.
+      await new Promise(resolve => {
+        if (typeof video.requestVideoFrameCallback === "function") {
+          video.requestVideoFrameCallback(() => resolve());
+        } else {
+          requestAnimationFrame(() => requestAnimationFrame(resolve));
+        }
+      });
+      if (video.readyState < 2 || !video.videoWidth || !video.videoHeight) {
+        throw new Error("Camera chưa có khung hình mới. Vui lòng đợi hình ảnh hiện rõ rồi chụp lại.");
+      }
+
+      // Match the exact 3:4 portrait crop visible in the camera preview.
+      // Without this crop, a landscape video frame could be saved wider than
+      // the preview, making the processed photo look like it used an old frame.
+      const sourceWidth = video.videoWidth;
+      const sourceHeight = video.videoHeight;
+      const previewAspect = 3 / 4;
+      const sourceAspect = sourceWidth / sourceHeight;
+      let sx = 0, sy = 0, sw = sourceWidth, sh = sourceHeight;
+      if (sourceAspect > previewAspect) {
+        sw = sourceHeight * previewAspect;
+        sx = (sourceWidth - sw) / 2;
+      } else if (sourceAspect < previewAspect) {
+        sh = sourceWidth / previewAspect;
+        sy = (sourceHeight - sh) / 2;
+      }
+      const scale = Math.min(1, 2560 / Math.max(sw, sh));
       const canvas = document.createElement("canvas");
-      canvas.width = Math.round(video.videoWidth * scale);
-      canvas.height = Math.round(video.videoHeight * scale);
+      canvas.width = Math.max(2, Math.round(sw * scale));
+      canvas.height = Math.max(2, Math.round(sh * scale));
       const context = canvas.getContext("2d");
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      context.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
       const blob = await new Promise((resolve, reject) => {
         canvas.toBlob(value => value ? resolve(value) : reject(new Error("Không lưu được khung hình camera. Vui lòng chụp lại.")), "image/jpeg", 0.96);
       });
