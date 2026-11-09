@@ -1,0 +1,38 @@
+name: Verify live production assets after 20 November merge
+
+on:
+  push:
+    branches:
+      - fix/camera-fresh-frame-20-11-20261109
+    paths:
+      - .github/workflows/verify-live-assets.yml
+
+permissions:
+  contents: read
+
+jobs:
+  verify-live:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check production homepage and required assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://dau-an-ao-xanh.naduy261100.workers.dev"
+          curl -sS -L -D "$RUNNER_TEMP/home.headers" -o "$RUNNER_TEMP/home.html" "$base/"
+          echo "HOME_STATUS=$(head -1 "$RUNNER_TEMP/home.headers" | tr -d '\r')"
+          grep -oE '<script[^>]+src="[^"]+"' "$RUNNER_TEMP/home.html" || true
+          if grep -qi "Góc tri ân thầy cô" "$RUNNER_TEMP/home.html"; then echo "TEACHER_DAY_HTML=present"; else echo "TEACHER_DAY_HTML=missing"; fi
+          asset="$base/assets/teacher-day-20-11.webp"
+          asset_status="$(curl -sS -L -o "$RUNNER_TEMP/teacher-day.webp" -D "$RUNNER_TEMP/asset.headers" -w "%{http_code}" "$asset")"
+          echo "TEACHER_DAY_ASSET_STATUS=$asset_status"
+          file --brief --mime-type "$RUNNER_TEMP/teacher-day.webp" || true
+          wc -c "$RUNNER_TEMP/teacher-day.webp"
+          js_path="$(grep -oE '<script[^>]+src="[^"]+"' "$RUNNER_TEMP/home.html" | sed -n '1p' | sed -E 's/.*src="([^"]+)".*/\1/')"
+          if [ -n "$js_path" ]; then
+            js_url="$base$js_path"
+            js_status="$(curl -sS -L -o "$RUNNER_TEMP/live.js" -w "%{http_code}" "$js_url")"
+            echo "LIVE_JS_PATH=$js_path"
+            echo "LIVE_JS_STATUS=$js_status"
+            grep -Eo 'getUserMedia|warmMattingModel|captureLivePhoto|harmonizeSubject|teacher-day-20-11' "$RUNNER_TEMP/live.js" | sort | uniq -c || true
+          fi
