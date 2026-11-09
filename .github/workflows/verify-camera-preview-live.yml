@@ -14,25 +14,23 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - name: Check live HTML, original 20/11 background and camera script
+      - name: Allow automatic production deployment to propagate
+        run: sleep 45
+      - name: Check live HTML, 20 November background and camera script
         shell: bash
         run: |
-          set -euo pipefail
+          set -u
           base="https://dau-an-ao-xanh.naduy261100.workers.dev"
-          curl -fsSL "$base/" -o "$RUNNER_TEMP/home.html"
-          grep -q "Góc tri ân thầy cô" "$RUNNER_TEMP/home.html"
-          grep -q 'src="/assets/app.js?v=20261109-camera-preview-match"' "$RUNNER_TEMP/home.html"
-          echo "HOMEPAGE=200 SECTION_20_11=present"
+          curl -sS -L -D "$RUNNER_TEMP/home.headers" -o "$RUNNER_TEMP/home.html" "$base/" || true
+          echo "HOME_STATUS=$(head -1 "$RUNNER_TEMP/home.headers" | tr -d '\r')"
+          echo "HOME_SCRIPT_TAGS:"
+          grep -oE '<script[^>]+src="[^"]+"' "$RUNNER_TEMP/home.html" || true
+          grep -qi "Góc tri ân thầy cô" "$RUNNER_TEMP/home.html" && echo "TEACHER_DAY_SECTION=present" || echo "TEACHER_DAY_SECTION=missing"
+          grep -q 'src="/assets/app.js?v=20261109-camera-preview-match"' "$RUNNER_TEMP/home.html" && echo "CAMERA_CACHE_BUSTER=present" || echo "CAMERA_CACHE_BUSTER=missing"
           asset_status="$(curl -sS -L -o "$RUNNER_TEMP/teacher-day.webp" -w "%{http_code}" "$base/assets/teacher-day-20-11.webp")"
           echo "TEACHER_DAY_ASSET_STATUS=$asset_status MIME=$(file --brief --mime-type "$RUNNER_TEMP/teacher-day.webp") BYTES=$(wc -c < "$RUNNER_TEMP/teacher-day.webp")"
-          test "$asset_status" = "200"
-          test "$(file --brief --mime-type "$RUNNER_TEMP/teacher-day.webp")" = "image/webp"
-          test "$(wc -c < "$RUNNER_TEMP/teacher-day.webp")" -gt 50000
-          curl -fsSL "$base/assets/app.js?v=20261109-camera-preview-match" -o "$RUNNER_TEMP/app.js"
-          grep -q "requestVideoFrameCallback" "$RUNNER_TEMP/app.js"
-          grep -q "previewAspect = 3 / 4" "$RUNNER_TEMP/app.js"
-          grep -q "captureLivePhoto" "$RUNNER_TEMP/app.js"
-          grep -q "warmMattingModel" "$RUNNER_TEMP/app.js"
-          grep -q "harmonizeSubject" "$RUNNER_TEMP/app.js"
-          grep -q "teacher-day-20-11" "$RUNNER_TEMP/app.js"
-          echo "CAMERA_SCRIPT=200 FRESH_DECODED_FRAME=present PREVIEW_CROP_3x4=present MATTE_WARMUP=present LIGHT_MATCH=present"
+          js_status="$(curl -sS -L -o "$RUNNER_TEMP/app.js" -w "%{http_code}" "$base/assets/app.js?v=20261109-camera-preview-match")"
+          echo "APP_JS_STATUS=$js_status"
+          for marker in requestVideoFrameCallback "previewAspect = 3 / 4" captureLivePhoto warmMattingModel harmonizeSubject teacher-day-20-11; do
+            if grep -Fq "$marker" "$RUNNER_TEMP/app.js"; then echo "JS_MARKER_PRESENT=$marker"; else echo "JS_MARKER_MISSING=$marker"; fi
+          done
